@@ -1,0 +1,242 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  ASISTENTE
+  PRODUCCION
+}
+
+enum TareaEstado {
+  ABIERTO
+  EN_PROCESO
+  EN_ESPERA
+  EMBALAJE
+  ENTREGADO_LOGISTICA
+}
+
+enum TipoComentario {
+  GENERAL
+  ESPERA
+  PROBLEMA
+}
+
+// Modelo de Usuario con roles
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  nombre    String
+  rol       UserRole
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  pedidosCreados     Pedido[]           @relation("PedidoCreador")
+  tareasAsignadas    Tarea[]            @relation("TareaAsignado")
+  comentarios        ComentarioTarea[]
+  historialEstados   HistorialEstado[]
+
+  @@map("users")
+}
+
+// Modelo de Cliente
+model Cliente {
+  id            String   @id @default(uuid())
+  razonSocial   String   // Obligatorio
+  ruc           String   @unique // Obligatorio y único
+  direccion     String   // Obligatorio
+  ciudad        String?  // Opcional
+  telefono      String?  // Opcional
+  email         String?  // Opcional
+  ubicacion     String?  // Opcional (coordenadas GPS, dirección detallada, etc.)
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relaciones
+  sucursales Sucursal[]
+
+  @@map("clientes")
+}
+
+// Modelo de Ruta de entrega
+model Ruta {
+  id          String   @id @default(uuid())
+  nombre      String   @unique
+  descripcion String?
+  activa      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  sucursales Sucursal[]
+
+  @@map("rutas")
+}
+
+// Modelo de Sucursal del cliente
+model Sucursal {
+  id         String   @id @default(uuid())
+  clienteId  String
+  rutaId     String   // Ahora obligatorio según requerimientos
+  nombre     String
+  direccion  String?
+  telefono   String?
+  activa     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relaciones
+  cliente  Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  ruta     Ruta      @relation(fields: [rutaId], references: [id], onDelete: Restrict)
+  pedidos  Pedido[]
+
+  @@map("sucursales")
+}
+
+// Modelo de Pedido
+model Pedido {
+  id              String   @id @default(uuid())
+  sucursalId      String
+  fechaRecepcion  DateTime @default(now()) // Cuando se creó el pedido
+  fechaProduccion DateTime // Día para el cual se va a producir (puede ser hoy o mañana)
+  detalles        Json     // [{producto: string, cantidad: number, precioUnitario: number}]
+  consignaciones  Json?    // [{producto: string, cantidad: number}] - Items de consignación (no producir)
+  montoTotal      Decimal  @db.Decimal(10, 2)
+  observaciones   String?  @db.Text
+  fueraDeHorario  Boolean  @default(false) // True si se creó después de 11:30 AM
+  creadoPorId     String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relaciones
+  sucursal  Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  creadoPor User     @relation("PedidoCreador", fields: [creadoPorId], references: [id])
+  tarea     Tarea?
+
+  @@map("pedidos")
+}
+
+// Modelo de Tarea (basada en un pedido)
+model Tarea {
+  id              String       @id @default(uuid())
+  pedidoId        String       @unique
+  estado          TareaEstado  @default(ABIERTO)
+  asignadoAId     String?
+  fechaCreacion   DateTime     @default(now())
+  fechaActualizacion DateTime  @updatedAt
+
+  // Relaciones
+  pedido           Pedido              @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  asignadoA        User?               @relation("TareaAsignado", fields: [asignadoAId], references: [id])
+  comentarios      ComentarioTarea[]
+  consignaciones   Consignacion[]
+  historialEstados HistorialEstado[]
+
+  @@map("tareas")
+}
+
+// Modelo de Consignación (devolución de productos)
+model Consignacion {
+  id                String   @id @default(uuid())
+  tareaId           String
+  itemsDevueltos    Json     // [{producto: string, cantidad: number}]
+  itemsReemplazo    Json     // [{producto: string, cantidad: number}]
+  observaciones     String?
+  fecha             DateTime @default(now())
+  createdAt         DateTime @default(now())
+
+  // Relaciones
+  tarea Tarea @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+
+  @@map("consignaciones")
+}
+
+// Modelo de Comentarios en Tareas
+model ComentarioTarea {
+  id         String         @id @default(uuid())
+  tareaId    String
+  usuarioId  String
+  comentario String         @db.Text
+  tipo       TipoComentario @default(GENERAL)
+  fecha      DateTime       @default(now())
+
+  // Relaciones
+  tarea   Tarea @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  usuario User  @relation(fields: [usuarioId], references: [id])
+
+  @@map("comentarios_tareas")
+}
+
+// Modelo de Historial de cambios de estado
+model HistorialEstado {
+  id             String      @id @default(uuid())
+  tareaId        String
+  estadoAnterior TareaEstado?
+  estadoNuevo    TareaEstado
+  usuarioId      String
+  comentario     String?     @db.Text
+  fecha          DateTime    @default(now())
+
+  // Relaciones
+  tarea   Tarea @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  usuario User  @relation(fields: [usuarioId], references: [id])
+
+  @@map("historial_estados")
+}
+
+// Modelo de Materia Prima
+model MateriaPrima {
+  id                 String   @id @default(uuid())
+  nombre             String   @unique
+  cantidadDisponible Float    @default(0)
+  unidadMedida       String   // e.g., "kg", "litros", "unidades"
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relaciones
+  productos ProductoMateriaPrima[]
+
+  @@map("materias_primas")
+}
+
+// Modelo de Producto
+model Producto {
+  id          String   @id @default(uuid())
+  nombre      String   @unique
+  precio      Decimal  @db.Decimal(10, 2)
+  descripcion String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  materiasPrimas ProductoMateriaPrima[]
+
+  @@map("productos")
+}
+
+// Tabla intermedia para Producto <-> MateriaPrima
+model ProductoMateriaPrima {
+  id             String @id @default(uuid())
+  productoId     String
+  materiaPrimaId String
+  cantidadRequerida Float // Cantidad de materia prima necesaria para 1 unidad de producto
+
+  // Relaciones
+  producto     Producto     @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  materiaPrima MateriaPrima @relation(fields: [materiaPrimaId], references: [id], onDelete: Cascade)
+
+  @@unique([productoId, materiaPrimaId])
+  @@map("productos_materias_primas")
+}
