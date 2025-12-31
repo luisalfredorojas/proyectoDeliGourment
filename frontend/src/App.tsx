@@ -19,6 +19,7 @@ import ProductosList from './pages/Productos/ProductosList';
 import ProductoForm from './pages/Productos/ProductoForm';
 import TareasKanban from './pages/Tareas/TareasKanban';
 import UsersList from './pages/Users/UsersList';
+import ConfiguracionesPage from './pages/Configuraciones/ConfiguracionesPage';
 
 import { UserRole } from './types/auth';
 
@@ -33,6 +34,7 @@ function App() {
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
 
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/configuraciones" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><ConfiguracionesPage /></ProtectedRoute>} />
 
         {/* Rutas */}
         <Route path="/rutas" element={<ProtectedRoute><RutasList /></ProtectedRoute>} />
@@ -74,8 +76,9 @@ function App() {
         } />
 
         {/* Pedidos */}
-        <Route path="/pedidos" element={<ProtectedRoute><PedidosList /></ProtectedRoute>} />
+        <Route path="/pedidos" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><PedidosList /></ProtectedRoute>} />
         <Route path="/pedidos/new" element={<ProtectedRoute allowedRoles={[UserRole.ASISTENTE, UserRole.ADMIN]}><PedidoForm /></ProtectedRoute>} />
+        <Route path="/pedidos/editar/:id" element={<ProtectedRoute allowedRoles={[UserRole.ASISTENTE, UserRole.ADMIN]}><PedidoForm /></ProtectedRoute>} />
 
         {/* Tareas */}
         <Route path="/tareas" element={<ProtectedRoute><TareasKanban /></ProtectedRoute>} />

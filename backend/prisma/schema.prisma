@@ -21,7 +21,9 @@ enum TareaEstado {
   EN_PROCESO
   EN_ESPERA
   EMBALAJE
-  ENTREGADO_LOGISTICA
+  LOGISTICA
+  ENTREGADO
+  CANCELADO
 }
 
 enum TipoComentario {
@@ -92,6 +94,7 @@ model Sucursal {
   rutaId     String   // Ahora obligatorio según requerimientos
   nombre     String
   direccion  String?
+  ubicacion  String?  // Coordenadas GPS o descripción de ubicación
   telefono   String?
   activa     Boolean  @default(true)
   createdAt  DateTime @default(now())

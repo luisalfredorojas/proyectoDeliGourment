@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Container, Paper, Typography, TextField, Button, Box, Grid, Autocomplete,
   IconButton, Alert, CircularProgress, Table, TableHead, TableRow, TableCell, TableBody,
@@ -13,6 +13,9 @@ import { Sucursal, DetalleProducto } from '../../types/entities';
 
 const PedidoForm: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEditMode = Boolean(id);
+
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
@@ -38,10 +41,45 @@ const PedidoForm: React.FC = () => {
       ]);
       setSucursales(sucursalesData);
       setProductos(productosData);
+
+      // Si es modo edición, cargar datos del pedido
+      if (isEditMode && id) {
+        await loadPedido(id, sucursalesData);
+      }
     } catch (error: any) {
       toast.error('Error al cargar datos');
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  const loadPedido = async (pedidoId: string, sucursalesData: Sucursal[]) => {
+    try {
+      const pedido = await pedidosService.getPedido(pedidoId);
+      
+      // Setear sucursal
+      const sucursal = sucursalesData.find(s => s.id === pedido.sucursalId);
+      if (sucursal) {
+        setSelectedSucursal(sucursal);
+      }
+
+      // Setear detalles
+      if (pedido.detalles && Array.isArray(pedido.detalles)) {
+        setDetalles(pedido.detalles as DetalleProducto[]);
+      }
+
+      // Setear consignaciones
+      if (pedido.consignaciones && Array.isArray(pedido.consignaciones)) {
+        setConsignaciones(pedido.consignaciones as { producto: string; cantidad: number }[]);
+      }
+
+      // Setear observaciones
+      if (pedido.observaciones) {
+        setObservaciones(pedido.observaciones);
+      }
+    } catch (error: any) {
+      toast.error('Error al cargar pedido');
+      navigate('/pedidos');
     }
   };
 
@@ -130,16 +168,26 @@ const PedidoForm: React.FC = () => {
 
     setLoading(true);
     try {
-      await pedidosService.createPedido({
+      const pedidoData = {
         sucursalId: selectedSucursal.id,
         detalles,
         consignaciones: consignaciones.length > 0 ? consignaciones : undefined,
         observaciones: observaciones.trim() || undefined,
-      });
-      toast.success(showWarning ? 'Pedido creado para mañana' : 'Pedido creado exitosamente');
+      };
+
+      if (isEditMode && id) {
+        // Modo edición
+        await pedidosService.updatePedido(id, pedidoData);
+        toast.success('Pedido actualizado exitosamente');
+      } else {
+        // Modo creación
+        await pedidosService.createPedido(pedidoData);
+        toast.success(showWarning ? 'Pedido creado para mañana' : 'Pedido creado exitosamente');
+      }
+      
       navigate('/pedidos');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error al crear pedido');
+      toast.error(error.response?.data?.message || `Error al ${isEditMode ? 'actualizar' : 'crear'} pedido`);
     } finally {
       setLoading(false);
     }
@@ -160,9 +208,13 @@ const PedidoForm: React.FC = () => {
       <Button startIcon={<ArrowBack />} onClick={() => navigate('/pedidos')} sx={{ mb: 2 }}>Volver a Pedidos</Button>
 
       <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom>Nuevo Pedido</Typography>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          {isEditMode ? 'Editar Pedido' : 'Nuevo Pedido'}
+        </Typography>
         <Typography variant="body2" color="text.secondary" paragraph>
-          Crea un pedido para una sucursal. Selecciona los productos del catálogo.
+          {isEditMode 
+            ? 'Modifica los detalles del pedido existente.' 
+            : 'Crea un pedido para una sucursal. Selecciona los productos del catálogo.'}
         </Typography>
 
         {showWarning && (
@@ -367,7 +419,9 @@ const PedidoForm: React.FC = () => {
                   Cancelar
                 </Button>
                 <Button type="submit" variant="contained" startIcon={<SaveIcon />} disabled={loading}>
-                  {loading ? 'Creando...' : 'Crear Pedido'}
+                  {loading 
+                    ? (isEditMode ? 'Actualizando...' : 'Creando...') 
+                    : (isEditMode ? 'Actualizar Pedido' : 'Crear Pedido')}
                 </Button>
               </Box>
             </Grid>

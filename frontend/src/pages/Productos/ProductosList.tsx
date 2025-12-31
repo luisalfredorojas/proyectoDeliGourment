@@ -3,7 +3,8 @@ import {
   Container, Paper, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Box, CircularProgress
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, ArrowBack,
+} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { productosService, Producto } from '../../services/productosService';
@@ -46,6 +47,9 @@ const ProductosList: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Button startIcon={<ArrowBack />} onClick={() => navigate('/configuraciones')} sx={{ mb: 2 }}>
+        Regresar a Configuraciones
+      </Button>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h4" component="h1">
           Productos

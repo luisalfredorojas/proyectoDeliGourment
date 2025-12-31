@@ -176,7 +176,7 @@ export class PedidosService {
     const pedido = await this.findOne(id);
 
     // Check if tarea is ENTREGADO
-    if (pedido.tarea && pedido.tarea.estado === 'ENTREGADO_LOGISTICA') {
+    if (pedido.tarea && pedido.tarea.estado === 'ENTREGADO') {
       throw new BadRequestException('No se puede modificar un pedido ya entregado');
     }
 
@@ -216,16 +216,21 @@ export class PedidosService {
   async remove(id: string, isAdmin: boolean) {
     const pedido = await this.findOne(id);
 
-    if (!isAdmin) {
-      throw new ForbiddenException('Solo ADMIN puede eliminar pedidos');
-    }
-
+    // REGLA: Solo se puede eliminar si la tarea está en ABIERTO
     if (pedido.tarea && pedido.tarea.estado !== 'ABIERTO') {
       throw new BadRequestException(
-        'No se puede eliminar un pedido que ya está en proceso',
+        `No se puede eliminar un pedido con tarea en estado: ${pedido.tarea.estado.replace(/_/g, ' ')}. Solo se pueden eliminar pedidos con tareas en estado ABIERTO.`,
       );
     }
 
+    // Eliminar la tarea primero (si existe)
+    if (pedido.tarea) {
+      await this.prisma.tarea.delete({
+        where: { id: pedido.tarea.id },
+      });
+    }
+
+    // Eliminar el pedido
     return this.prisma.pedido.delete({
       where: { id },
     });

@@ -90,4 +90,14 @@ export class TareasController {
   getHistorial(@Param('id') id: string) {
     return this.tareasService.getHistorialCompleto(id);
   }
+
+  @Patch(':id/cancelar')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'ASISTENTE')
+  @ApiOperation({ summary: 'Cancelar tarea (ADMIN o ASISTENTE)' })
+  @ApiResponse({ status: 200, description: 'Tarea cancelada' })
+  @ApiResponse({ status: 400, description: 'Tarea ya entregada o ya cancelada' })
+  cancelarTarea(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.tareasService.cancelarTarea(id, user.id);
+  }
 }

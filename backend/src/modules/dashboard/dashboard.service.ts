@@ -126,7 +126,9 @@ export class DashboardService {
       EN_PROCESO: 0,
       EN_ESPERA: 0,
       EMBALAJE: 0,
-      ENTREGADO_LOGISTICA: 0,
+      LOGISTICA: 0,
+      ENTREGADO: 0,
+      CANCELADO: 0,
     };
 
     tareas.forEach((t) => {

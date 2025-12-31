@@ -33,6 +33,7 @@ import {
   Delete as DeleteIcon,
   Search as SearchIcon,
   Store as StoreIcon,
+  ArrowBack,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { sucursalesService } from '../../services/sucursalesService';
@@ -118,6 +119,9 @@ const SucursalesList: React.FC = () => {
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Button startIcon={<ArrowBack />} onClick={() => navigate('/configuraciones')} sx={{ mb: 2 }}>
+        Regresar a Configuraciones
+      </Button>
       <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <StoreIcon sx={{ fontSize: 40, color: 'primary.main' }} />

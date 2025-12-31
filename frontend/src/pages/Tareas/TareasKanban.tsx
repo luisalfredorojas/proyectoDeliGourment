@@ -18,10 +18,12 @@ const DroppableColumn: React.FC<{ children: React.ReactNode; id: string }> = ({ 
 
 const ESTADOS: TareaEstado[] = [
   TareaEstado.ABIERTO,
-  TareaEstado.EN_PROCESO,
   TareaEstado.EN_ESPERA,
+  TareaEstado.EN_PROCESO,
   TareaEstado.EMBALAJE,
-  TareaEstado.ENTREGADO_LOGISTICA,
+  TareaEstado.LOGISTICA,
+  TareaEstado.ENTREGADO,
+  TareaEstado.CANCELADO,
 ];
 
 const ESTADO_LABELS: Record<TareaEstado, string> = {
@@ -29,7 +31,9 @@ const ESTADO_LABELS: Record<TareaEstado, string> = {
   [TareaEstado.EN_PROCESO]: 'En Proceso',
   [TareaEstado.EN_ESPERA]: 'En Espera',
   [TareaEstado.EMBALAJE]: 'Embalaje',
-  [TareaEstado.ENTREGADO_LOGISTICA]: 'Entregado',
+  [TareaEstado.LOGISTICA]: 'Logística',
+  [TareaEstado.ENTREGADO]: 'Entregado',
+  [TareaEstado.CANCELADO]: 'Cancelado',
 };
 
 const ESTADO_COLORS: Record<TareaEstado, string> = {
@@ -37,13 +41,16 @@ const ESTADO_COLORS: Record<TareaEstado, string> = {
   [TareaEstado.EN_PROCESO]: '#2196f3',
   [TareaEstado.EN_ESPERA]: '#ff9800',
   [TareaEstado.EMBALAJE]: '#9c27b0',
-  [TareaEstado.ENTREGADO_LOGISTICA]: '#4caf50',
+  [TareaEstado.LOGISTICA]: '#f57c00',
+  [TareaEstado.ENTREGADO]: '#4caf50',
+  [TareaEstado.CANCELADO]: '#f44336',
 };
 
 const TareasKanban: React.FC = () => {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [rutas, setRutas] = useState<Ruta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [weekLabel, setWeekLabel] = useState<string>('');
   const [activeTarea, setActiveTarea] = useState<Tarea | null>(null);
   const [selectedTarea, setSelectedTarea] = useState<Tarea | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -62,7 +69,54 @@ const TareasKanban: React.FC = () => {
         tareasService.getTareas({ rutaId: filterRuta || undefined }),
         rutasService.getRutas(),
       ]);
-      setTareas(tareasData);
+      
+      // Helper: Get Monday of a given week
+      const getMonday = (date: Date): Date => {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+        d.setDate(diff);
+        d.setHours(0, 0, 0, 0);
+        return d;
+      };
+      
+      // Get start of work week (Monday), considering Friday 11:30am rule
+      const getWorkWeekStart = (): Date => {
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0=Sunday, 5=Friday
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        
+        // If Friday after 11:30am, "current week" becomes next week
+        if (dayOfWeek === 5 && (hours > 11 || (hours === 11 && minutes >= 30))) {
+          const nextMonday = getMonday(now);
+          nextMonday.setDate(nextMonday.getDate() + 7);
+          return nextMonday;
+        }
+        
+        return getMonday(now);
+      };
+      
+      // Filter tasks: only show tasks from current work week
+      const mondayOfWeek = getWorkWeekStart();
+      const nextMonday = new Date(mondayOfWeek);
+      nextMonday.setDate(nextMonday.getDate() + 7);
+      
+      const filteredTareas = tareasData.filter((tarea) => {
+        if (!tarea.pedido) return false;
+        const fechaProduccion = new Date(tarea.pedido.fechaProduccion);
+        // Must be >= Monday of current week and < Monday of next week
+        return fechaProduccion >= mondayOfWeek && fechaProduccion < nextMonday;
+      });
+      
+      // Generate week label
+      const day = mondayOfWeek.getDate();
+      const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 
+                      'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const month = months[mondayOfWeek.getMonth()];
+      setWeekLabel(`Semana del ${day} de ${month}`);
+      
+      setTareas(filteredTareas);
       setRutas(rutasData);
     } catch (error: any) {
       toast.error('Error al cargar tareas');
@@ -80,13 +134,32 @@ const TareasKanban: React.FC = () => {
     
     // Group products by name and sum quantities
     const productMap = new Map<string, number>();
+    const consignmentMap = new Map<string, number>();
     
     tareasEnProceso.forEach(tarea => {
+      // Sum production products
       tarea.pedido?.detalles?.forEach(detalle => {
         const productName = detalle.producto || 'Sin nombre';
         const currentQty = productMap.get(productName) || 0;
         productMap.set(productName, currentQty + (detalle.cantidad || 0));
       });
+      
+      // Sum consignment products
+      if (tarea.pedido?.consignaciones) {
+        try {
+          const consignaciones = Array.isArray(tarea.pedido.consignaciones) 
+            ? tarea.pedido.consignaciones 
+            : JSON.parse(tarea.pedido.consignaciones as any);
+          
+          consignaciones.forEach((consig: any) => {
+            const productName = consig.producto || 'Sin nombre';
+            const currentQty = consignmentMap.get(productName) || 0;
+            consignmentMap.set(productName, currentQty + (consig.cantidad || 0));
+          });
+        } catch (error) {
+          console.error('Error parsing consignaciones:', error);
+        }
+      }
     });
     
     // Convert to array and sort by quantity descending
@@ -94,8 +167,13 @@ const TareasKanban: React.FC = () => {
       .map(([nombre, cantidad]) => ({ nombre, cantidad }))
       .sort((a, b) => b.cantidad - a.cantidad);
     
+    const consignments = Array.from(consignmentMap.entries())
+      .map(([nombre, cantidad]) => ({ nombre, cantidad }))
+      .sort((a, b) => b.cantidad - a.cantidad);
+    
     return {
       products,
+      consignments,
       totalTareas: tareasEnProceso.length,
     };
   };
@@ -130,6 +208,12 @@ const TareasKanban: React.FC = () => {
     }
 
     if (!nuevoEstado) return;
+
+    // No permitir arrastrar a CANCELADO
+    if (nuevoEstado === TareaEstado.CANCELADO) {
+      toast.warning('No se puede cambiar a CANCELADO mediante drag & drop. Use el botón "Cancelar Tarea" en el detalle.');
+      return;
+    }
 
     const tarea = tareas.find(t => t.id === tareaId);
     if (!tarea || tarea.estado === nuevoEstado) return;
@@ -176,7 +260,9 @@ const TareasKanban: React.FC = () => {
           <KanbanIcon sx={{ fontSize: 40, color: 'primary.main' }} />
           <div>
             <Typography variant="h4" fontWeight="bold">Tablero de Tareas</Typography>
-            <Typography variant="body2" color="text.secondary">Arrastra las tarjetas para cambiar su estado</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {weekLabel} · Arrastra las tarjetas para cambiar su estado · {tareas.length} tareas
+            </Typography>
           </div>
         </Box>
 
@@ -220,6 +306,35 @@ const TareasKanban: React.FC = () => {
                     </Typography>
                     <Typography variant="body2" align="center" sx={{ opacity: 0.9 }}>
                       {product.nombre}
+                    </Typography>
+                  </Paper>
+                ))}
+                {/* Consignment Products */}
+                {summary.consignments && summary.consignments.length > 0 && summary.consignments.map((consignment, index) => (
+                  <Paper
+                    key={`consig-${index}`}
+                    elevation={3}
+                    sx={{
+                      minWidth: 200,
+                      p: 2.5,
+                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      color: 'white',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 2,
+                      border: '2px solid #fbbf24',
+                    }}
+                  >
+                    <Typography variant="h3" fontWeight="bold" sx={{ mb: 0.5 }}>
+                      {consignment.cantidad}
+                    </Typography>
+                    <Typography variant="body2" align="center" sx={{ opacity: 0.9 }}>
+                      {consignment.nombre}
+                    </Typography>
+                    <Typography variant="caption" sx={{ mt: 0.5, opacity: 0.8, fontWeight: 'bold' }}>
+                      🔄 CONSIGNACIÓN
                     </Typography>
                   </Paper>
                 ))}

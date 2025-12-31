@@ -50,4 +50,9 @@ export const tareasService = {
     const response = await apiClient.get<TimelineEvent[]>(`/tareas/${id}/historial`);
     return response.data;
   },
+
+  async cancelarTarea(id: string): Promise<Tarea> {
+    const response = await apiClient.patch<Tarea>(`/tareas/${id}/cancelar`);
+    return response.data;
+  },
 };

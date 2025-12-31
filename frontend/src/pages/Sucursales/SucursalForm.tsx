@@ -28,6 +28,7 @@ const sucursalSchema = z.object({
   rutaId: z.string().min(1, 'La ruta es requerida'),
   nombre: z.string().min(3, 'Mínimo 3 caracteres').max(200, 'Máximo 200 caracteres'),
   direccion: z.string().optional(),
+  ubicacion: z.string().optional(),
   telefono: z.string().optional(),
   activa: z.boolean().optional(),
 });
@@ -46,7 +47,7 @@ const SucursalForm: React.FC = () => {
 
   const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<SucursalFormValues>({
     resolver: zodResolver(sucursalSchema),
-    defaultValues: { nombre: '', direccion: '', telefono: '', activa: true, clienteId: '', rutaId: '' },
+    defaultValues: { nombre: '', direccion: '', ubicacion: '', telefono: '', activa: true, clienteId: '', rutaId: '' },
   });
 
   const selectedClienteId = watch('clienteId');
@@ -71,6 +72,7 @@ const SucursalForm: React.FC = () => {
         setValue('rutaId', sucursal.rutaId);
         setValue('nombre', sucursal.nombre);
         setValue('direccion', sucursal.direccion || '');
+        setValue('ubicacion', sucursal.ubicacion || '');
         setValue('telefono', sucursal.telefono || '');
         setValue('activa', sucursal.activa);
       }
@@ -95,6 +97,7 @@ const SucursalForm: React.FC = () => {
           rutaId: data.rutaId,
           nombre: data.nombre,
           direccion: data.direccion,
+          ubicacion: data.ubicacion,
           telefono: data.telefono,
         };
         await sucursalesService.createSucursal(createData);
@@ -187,6 +190,10 @@ const SucursalForm: React.FC = () => {
 
             <Grid item xs={12} md={6}>
               <TextField fullWidth label="Dirección" {...register('direccion')} error={!!errors.direccion} helperText={errors.direccion?.message || 'Opcional'} placeholder="Calle Los Olivos 456" />
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth label="Ubicación" {...register('ubicacion')} error={!!errors.ubicacion} helperText={errors.ubicacion?.message || 'Opcional'} placeholder="Coordenadas GPS o referencia" />
             </Grid>
 
             <Grid item xs={12} md={6}>

@@ -29,6 +29,7 @@ import {
   Delete as DeleteIcon,
   Search as SearchIcon,
   Route as RouteIcon,
+  ArrowBack,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { rutasService } from '../../services/rutasService';
@@ -100,6 +101,9 @@ const RutasList: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Button startIcon={<ArrowBack />} onClick={() => navigate('/configuraciones')} sx={{ mb: 2 }}>
+        Regresar a Configuraciones
+      </Button>
       <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <RouteIcon sx={{ fontSize: 40, color: 'primary.main' }} />

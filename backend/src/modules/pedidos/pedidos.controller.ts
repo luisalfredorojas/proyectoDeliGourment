@@ -83,8 +83,8 @@ export class PedidosController {
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Eliminar pedido (solo ADMIN y si tarea está ABIERTA)' })
+  @Roles('ASISTENTE', 'ADMIN')
+  @ApiOperation({ summary: 'Eliminar pedido (ASISTENTE o ADMIN)' })
   remove(@Param('id') id: string, @CurrentUser() user: any) {
     const isAdmin = user.rol === 'ADMIN';
     return this.pedidosService.remove(id, isAdmin);

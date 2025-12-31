@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container, Paper, Typography, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   IconButton, Chip, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Button,
   TextField, MenuItem, Select, FormControl, InputLabel, Switch,
 } from '@mui/material';
-import { Edit as EditIcon, People as PeopleIcon } from '@mui/icons-material';
+import { Edit as EditIcon, People as PeopleIcon, ArrowBack } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { usersService, User, UpdateUserDto } from '../../services/usersService';
 import { UserRole } from '../../types/auth';
 
 const UsersList: React.FC = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -91,6 +93,9 @@ const UsersList: React.FC = () => {
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ mt: 4 }}>
+      <Button startIcon={<ArrowBack />} onClick={() => navigate('/configuraciones')} sx={{ mb: 2 }}>
+        Regresar a Configuraciones
+      </Button>
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
       </Container>
     );
@@ -98,6 +103,9 @@ const UsersList: React.FC = () => {
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Button startIcon={<ArrowBack />} onClick={() => navigate('/configuraciones')} sx={{ mb: 2 }}>
+        Regresar a Configuraciones
+      </Button>
       <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
         <PeopleIcon sx={{ fontSize: 40, color: 'primary.main' }} />
         <div>

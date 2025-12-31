@@ -31,6 +31,7 @@ const COLORS = {
   warning: '#ff9800',
   purple: '#9c27b0',
   grey: '#9e9e9e',
+  error: '#f44336',
 };
 
 const TASK_COLORS = {
@@ -38,7 +39,9 @@ const TASK_COLORS = {
   EN_PROCESO: COLORS.primary,
   EN_ESPERA: COLORS.warning,
   EMBALAJE: COLORS.purple,
-  ENTREGADO_LOGISTICA: COLORS.success,
+  LOGISTICA: '#f57c00',
+  ENTREGADO: COLORS.success,
+  CANCELADO: COLORS.error,
 };
 
 const AdminDashboard: React.FC = () => {
@@ -180,7 +183,9 @@ const AdminDashboard: React.FC = () => {
                         'EN_PROCESO': 'En Proceso',
                         'EN_ESPERA': 'En Espera',
                         'EMBALAJE': 'Embalaje',
-                        'ENTREGADO_LOGISTICA': 'Entregado'
+                        'LOGISTICA': 'Logística',
+                        'ENTREGADO': 'Entregado',
+                        'CANCELADO': 'Cancelado'
                       };
                       return labels[value] || value;
                     }}
@@ -276,7 +281,7 @@ const AdminDashboard: React.FC = () => {
                   <Chip
                     label={pedido.tarea?.estado || 'Sin tarea'}
                     size="small"
-                    color={pedido.tarea?.estado === 'ENTREGADO_LOGISTICA' ? 'success' : 'default'}
+                    color={pedido.tarea?.estado === 'ENTREGADO' ? 'success' : 'default'}
                   />
                 </TableCell>
               </TableRow>

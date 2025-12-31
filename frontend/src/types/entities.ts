@@ -68,6 +68,7 @@ export interface Sucursal {
   rutaId: string;
   nombre: string;
   direccion?: string;
+  ubicacion?: string;
   telefono?: string;
   activa: boolean;
   createdAt: string;
@@ -87,6 +88,7 @@ export interface CreateSucursalData {
   rutaId: string;
   nombre: string;
   direccion?: string;
+  ubicacion?: string;
   telefono?: string;
 }
 
@@ -95,6 +97,7 @@ export interface UpdateSucursalData {
   rutaId?: string;
   nombre?: string;
   direccion?: string;
+  ubicacion?: string;
   telefono?: string;
   activa?: boolean;
 }
@@ -163,7 +166,9 @@ export enum TareaEstado {
   EN_PROCESO = 'EN_PROCESO',
   EN_ESPERA = 'EN_ESPERA',
   EMBALAJE = 'EMBALAJE',
-  ENTREGADO_LOGISTICA = 'ENTREGADO_LOGISTICA',
+  LOGISTICA = 'LOGISTICA',
+  ENTREGADO = 'ENTREGADO',
+  CANCELADO = 'CANCELADO',
 }
 
 export enum TipoComentario {

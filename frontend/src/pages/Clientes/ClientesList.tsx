@@ -29,6 +29,7 @@ import {
   Delete as DeleteIcon,
   Search as SearchIcon,
   Business as BusinessIcon,
+  ArrowBack,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { clientesService } from '../../services/clientesService';
@@ -100,6 +101,9 @@ const ClientesList: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Button startIcon={<ArrowBack />} onClick={() => navigate('/configuraciones')} sx={{ mb: 2 }}>
+        Regresar a Configuraciones
+      </Button>
       <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <BusinessIcon sx={{ fontSize: 40, color: 'primary.main' }} />

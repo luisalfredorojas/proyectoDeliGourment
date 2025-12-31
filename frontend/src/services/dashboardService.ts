@@ -11,7 +11,9 @@ export interface TareasPorEstado {
   EN_PROCESO: number;
   EN_ESPERA: number;
   EMBALAJE: number;
-  ENTREGADO_LOGISTICA: number;
+  LOGISTICA: number;
+  ENTREGADO: number;
+  CANCELADO: number;
 }
 
 export interface VentaDia {

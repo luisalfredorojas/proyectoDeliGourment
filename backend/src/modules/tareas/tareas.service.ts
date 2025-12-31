@@ -169,8 +169,8 @@ export class TareasService {
   ) {
     const tarea = await this.findOne(id);
 
-    // Cannot change state if already ENTREGADO_LOGISTICA
-    if (tarea.estado === TareaEstado.ENTREGADO_LOGISTICA) {
+    // Cannot change state if already ENTREGADO
+    if (tarea.estado === TareaEstado.ENTREGADO) {
       throw new BadRequestException(
         'No se puede cambiar el estado de una tarea ya entregada',
       );
@@ -366,5 +366,48 @@ export class TareasService {
     ].sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
 
     return combined;
+  }
+
+  async cancelarTarea(id: string, userId: string) {
+    const tarea = await this.findOne(id);
+
+    // No se puede cancelar si ya está entregada
+    if (tarea.estado === 'ENTREGADO') {
+      throw new BadRequestException(
+        'No se puede cancelar una tarea ya entregada',
+      );
+    }
+
+    // No se puede cancelar si ya está cancelada
+    if (tarea.estado === 'CANCELADO') {
+      throw new BadRequestException('La tarea ya está cancelada');
+    }
+
+    return this.prisma.tarea.update({
+      where: { id },
+      data: {
+        estado: 'CANCELADO',
+        historialEstados: {
+          create: {
+            estadoAnterior: tarea.estado,
+            estadoNuevo: 'CANCELADO',
+            usuarioId: userId,
+          },
+        },
+      },
+      include: {
+        pedido: {
+          include: {
+            sucursal: {
+              include: {
+                cliente: true,
+                ruta: true,
+              },
+            },
+          },
+        },
+        asignadoA: true,
+      },
+    });
   }
 }

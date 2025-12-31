@@ -13,13 +13,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { UserRole } from '../../types/auth';
 
 const ESTADO_LABELS: Record<TareaEstado, string> = {
-  [TareaEstado.ABIERTO]: 'Abierto',
-  [TareaEstado.EN_PROCESO]: 'En Proceso',
-  [TareaEstado.EN_ESPERA]: 'En Espera',
-  [TareaEstado.EMBALAJE]: 'Embalaje',
-  [TareaEstado.LOGISTICA]: 'Logística',
-  [TareaEstado.ENTREGADO]: 'Entregado',
-  [TareaEstado.CANCELADO]: 'Cancelado',
+  ABIERTO: 'Abierto', EN_PROCESO: 'En Proceso', EN_ESPERA: 'En Espera',
+  EMBALAJE: 'Embalaje', ENTREGADO_LOGISTICA: 'Entregado', CANCELADO: 'Cancelado',
 };
 
 interface TareaDetailModalProps {
@@ -39,7 +34,7 @@ const TareaDetailModal: React.FC<TareaDetailModalProps> = ({ open, tarea: initia
 
   const canCancel = (user?.rol === UserRole.ADMIN || user?.rol === UserRole.ASISTENTE)
     && tarea.estado !== TareaEstado.CANCELADO
-    && tarea.estado !== TareaEstado.ENTREGADO;
+    && tarea.estado !== TareaEstado.ENTREGADO_LOGISTICA;
 
   useEffect(() => {
     if (open) {
@@ -181,7 +176,7 @@ const TareaDetailModal: React.FC<TareaDetailModalProps> = ({ open, tarea: initia
               <Chip label={ESTADO_LABELS[tarea.estado]} color="primary" />
               
               {/* State editing - only if not ENTREGADO */}
-              {tarea.estado !== TareaEstado.ENTREGADO && (
+              {tarea.estado !== TareaEstado.ENTREGADO_LOGISTICA && (
                 <Box sx={{ mt: 2 }}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Cambiar Estado</InputLabel>
@@ -194,8 +189,7 @@ const TareaDetailModal: React.FC<TareaDetailModalProps> = ({ open, tarea: initia
                       <MenuItem value={TareaEstado.EN_PROCESO}>En Proceso</MenuItem>
                       <MenuItem value={TareaEstado.EN_ESPERA}>En Espera</MenuItem>
                       <MenuItem value={TareaEstado.EMBALAJE}>Embalaje</MenuItem>
-                      <MenuItem value={TareaEstado.LOGISTICA}>Logística</MenuItem>
-                      <MenuItem value={TareaEstado.ENTREGADO}>Entregado</MenuItem>
+                      <MenuItem value={TareaEstado.ENTREGADO_LOGISTICA}>Entregado</MenuItem>
                     </Select>
                   </FormControl>
                 </Box>
@@ -317,7 +311,7 @@ const TareaDetailModal: React.FC<TareaDetailModalProps> = ({ open, tarea: initia
                   {event.tipo === 'historial' ? (
                     <Box>
                       <Typography variant="caption" fontWeight="bold">{event.usuario?.nombre}</Typography>
-                      <Typography variant="body2">Cambió estado: {event.data.estadoAnterior || 'Nuevo'} → {event.data.estadoNuevo}</Typography>
+                      <Typography variant="body2">cambió estado: {event.data.estadoAnterior || 'Nuevo'} → {event.data.estadoNuevo}</Typography>
                     </Box>
                   ) : (
                     <Box>
@@ -331,25 +325,26 @@ const TareaDetailModal: React.FC<TareaDetailModalProps> = ({ open, tarea: initia
                 </Paper>
               </Box>
             </Box>
-          ))}
-        </DialogContent>
-      </Dialog>
+                  ))}
+                </DialogContent>
+              </Dialog>
+            </Dialog>
 
-      <DialogActions>
-        {canCancel && (
-          <Button
-            onClick={handleCancelarTarea}
-            color="error"
-            startIcon={<CancelIcon />}
-            sx={{ mr: 'auto' }}
-          >
-            Cancelar Tarea
-          </Button>
-        )}
-        <Button onClick={onClose}>Cerrar</Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
+            <DialogActions>
+              {canCancel && (
+                <Button
+                  onClick={handleCancelarTarea}
+                  color="error"
+                  startIcon={<CancelIcon />}
+                  sx={{ mr: 'auto' }}
+                >
+                  Cancelar Tarea
+                </Button>
+              )}
+              <Button onClick={onClose}>Cerrar</Button>
+            </DialogActions>
+          </Dialog>
+        );
+      };
 
-export default TareaDetailModal;
+      export default TareaDetailModal;
