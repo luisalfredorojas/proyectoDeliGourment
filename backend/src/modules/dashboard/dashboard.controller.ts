@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Query } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -15,8 +15,11 @@ export class DashboardController {
   @Get('stats')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Obtener estadísticas completas (solo Admin)' })
-  async getAdminStats() {
-    return this.dashboardService.getAdminStats();
+  async getAdminStats(
+    @Query('fechaInicio') fechaInicio?: string,
+    @Query('fechaFin') fechaFin?: string,
+  ) {
+    return this.dashboardService.getAdminStats(fechaInicio, fechaFin);
   }
 
   @Get('tareas-operativas')

@@ -12,12 +12,15 @@ import {
   TableCell,
   TableBody,
   Chip,
+  TextField,
+  Button,
 } from '@mui/material';
 import {
   AttachMoney,
   ShoppingCart,
   Assignment,
   Factory,
+  Today as TodayIcon,
 } from '@mui/icons-material';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { dashboardService, AdminStats } from '../../services/dashboardService';
@@ -47,20 +50,29 @@ const TASK_COLORS = {
 const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fechaInicio, setFechaInicio] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [fechaFin, setFechaFin] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [fechaInicio, fechaFin]);
 
   const loadStats = async () => {
     try {
-      const data = await dashboardService.getAdminStats();
+      setLoading(true);
+      const data = await dashboardService.getAdminStats(fechaInicio, fechaFin);
       setStats(data);
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetToToday = () => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    setFechaInicio(today);
+    setFechaFin(today);
   };
 
   if (loading) {
@@ -93,22 +105,59 @@ const AdminDashboard: React.FC = () => {
         Dashboard
       </Typography>
 
+      {/* Date Range Filter */}
+      <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              label="Fecha Inicio"
+              type="date"
+              value={fechaInicio}
+              onChange={(e) => setFechaInicio(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              fullWidth
+              label="Fecha Fin"
+              type="date"
+              value={fechaFin}
+              onChange={(e) => setFechaFin(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<TodayIcon />}
+              onClick={resetToToday}
+              sx={{ height: 56 }}
+            >
+              Hoy
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
+
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Ventas Hoy"
-            value={`$${stats.ventasHoy.total.toFixed(2)}`}
+            title="Ventas del Período"
+            value={`$${stats.ventasRango.total.toFixed(2)}`}
             icon={<AttachMoney sx={{ fontSize: 32 }} />}
             color={COLORS.success}
-            trend={stats.ventasHoy.comparacionAyer}
-            subtitle={`${stats.ventasHoy.pedidosCount} pedidos`}
+            trend={stats.ventasRango.comparacionAyer}
+            subtitle={`${stats.ventasRango.pedidosCount} pedidos`}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
-            title="Pedidos Hoy"
-            value={stats.ventasHoy.pedidosCount}
+            title="Pedidos"
+            value={stats.ventasRango.pedidosCount}
             icon={<ShoppingCart sx={{ fontSize: 32 }} />}
             color={COLORS.primary}
           />
@@ -169,7 +218,7 @@ const AdminDashboard: React.FC = () => {
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, value }) => `${value}`}
+                    label={({ value }) => `${value}`}
                   >
                     {tareasPieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={TASK_COLORS[entry.name as keyof typeof TASK_COLORS]} />

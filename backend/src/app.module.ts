@@ -12,6 +12,7 @@ import { MateriasPrimasModule } from './modules/materias-primas/materias-primas.
 import { ProductosModule } from './modules/productos/productos.module';
 import { UsersModule } from './modules/users/users.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ReportesModule } from './modules/reportes/reportes.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     ProductosModule,
     UsersModule,
     DashboardModule,
+    ReportesModule,
   ],
   controllers: [],
   providers: [],

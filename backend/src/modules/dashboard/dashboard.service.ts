@@ -1,46 +1,56 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { startOfDay, subDays, format } from 'date-fns';
+import { startOfDay, endOfDay, subDays, format } from 'date-fns';
 
 @Injectable()
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
-  async getAdminStats() {
-    const hoy = startOfDay(new Date());
-    const ayer = subDays(hoy, 1);
+  async getAdminStats(fechaInicio?: string, fechaFin?: string) {
+    // Si no se proporcionan fechas, usar el día actual
+    const inicio = fechaInicio ? new Date(fechaInicio) : startOfDay(new Date());
+    const fin = fechaFin ? endOfDay(new Date(fechaFin)) : endOfDay(new Date());
 
-    // Ventas de hoy vs ayer
-    const ventasHoy = await this.getVentasDia(hoy);
-    const ventasAyer = await this.getVentasDia(ayer);
+    // Ventas del rango seleccionado
+    const ventasRango = await this.getVentasRango(inicio, fin);
     
-    const comparacionAyer = ventasAyer.total > 0 
-      ? ((ventasHoy.total - ventasAyer.total) / ventasAyer.total) * 100 
+    // Calcular comparación con período anterior (mismo número de días)
+    const diasDiferencia = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
+    const inicioAnterior = subDays(inicio, diasDiferencia);
+    const finAnterior = subDays(fin, diasDiferencia);
+    const ventasAnterior = await this.getVentasRango(inicioAnterior, finAnterior);
+    
+    const comparacionAnterior = ventasAnterior.total > 0 
+      ? ((ventasRango.total - ventasAnterior.total) / ventasAnterior.total) * 100 
       : 0;
 
-    // Tareas por estado
-    const tareasPorEstado = await this.getTareasPorEstado();
+    // Tareas por estado (filtradas por fecha)
+    const tareasPorEstado = await this.getTareasPorEstado(inicio, fin);
 
-    // Productos a producir (items en tareas EN_PROCESO)
-    const productosAProducir = await this.getProductosEnProceso();
+    // Productos a producir (items en tareas EN_PROCESO filtradas por fecha)
+    const productosAProducir = await this.getProductosEnProceso(inicio, fin);
 
-    // Ventas últimos 7 días
-    const ventasPorDia = await this.getVentasUltimos7Dias();
+    // Ventas por día en el rango
+    const ventasPorDia = await this.getVentasPorDiaRango(inicio, fin);
 
-    // Top 5 productos más vendidos
-    const topProductos = await this.getTopProductos(5);
+    // Top 5 productos más vendidos en el rango
+    const topProductos = await this.getTopProductos(5, inicio, fin);
 
-    // Ventas por ruta
-    const ventasPorRuta = await this.getVentasPorRuta();
+    // Ventas por ruta en el rango
+    const ventasPorRuta = await this.getVentasPorRuta(inicio, fin);
 
-    // Pedidos recientes
-    const pedidosRecientes = await this.getPedidosRecientes(5);
+    // Pedidos recientes en el rango
+    const pedidosRecientes = await this.getPedidosRecientes(5, inicio, fin);
 
     return {
-      ventasHoy: {
-        total: ventasHoy.total,
-        comparacionAyer: Math.round(comparacionAyer * 10) / 10, // 1 decimal
-        pedidosCount: ventasHoy.count,
+      ventasRango: {
+        total: ventasRango.total,
+        comparacionAnterior: Math.round(comparacionAnterior * 10) / 10,
+        pedidosCount: ventasRango.count,
+      },
+      periodo: {
+        inicio: format(inicio, 'yyyy-MM-dd'),
+        fin: format(fin, 'yyyy-MM-dd'),
       },
       tareasPorEstado,
       productosAProducir,
@@ -95,15 +105,12 @@ export class DashboardService {
   }
 
   // Helper methods
-  private async getVentasDia(fecha: Date) {
-    const siguienteDia = new Date(fecha);
-    siguienteDia.setDate(siguienteDia.getDate() + 1);
-
+  private async getVentasRango(inicio: Date, fin: Date) {
     const pedidos = await this.prisma.pedido.findMany({
       where: {
         fechaProduccion: {
-          gte: fecha,
-          lt: siguienteDia,
+          gte: inicio,
+          lte: fin,
         },
       },
       select: {
@@ -115,10 +122,19 @@ export class DashboardService {
     return { total, count: pedidos.length };
   }
 
-  private async getTareasPorEstado() {
-    const tareas = await this.prisma.tarea.groupBy({
-      by: ['estado'],
-      _count: true,
+  private async getTareasPorEstado(inicio: Date, fin: Date) {
+    const tareas = await this.prisma.tarea.findMany({
+      where: {
+        pedido: {
+          fechaProduccion: {
+            gte: inicio,
+            lte: fin,
+          },
+        },
+      },
+      select: {
+        estado: true,
+      },
     });
 
     const resultado = {
@@ -132,15 +148,23 @@ export class DashboardService {
     };
 
     tareas.forEach((t) => {
-      resultado[t.estado] = t._count;
+      resultado[t.estado] = (resultado[t.estado] || 0) + 1;
     });
 
     return resultado;
   }
 
-  private async getProductosEnProceso() {
+  private async getProductosEnProceso(inicio: Date, fin: Date) {
     const tareasEnProceso = await this.prisma.tarea.findMany({
-      where: { estado: 'EN_PROCESO' },
+      where: {
+        estado: 'EN_PROCESO',
+        pedido: {
+          fechaProduccion: {
+            gte: inicio,
+            lte: fin,
+          },
+        },
+      },
       include: {
         pedido: {
           select: {
@@ -163,30 +187,56 @@ export class DashboardService {
     return total;
   }
 
-  private async getVentasUltimos7Dias() {
+  private async getVentasPorDiaRango(inicio: Date, fin: Date) {
     const resultado = [];
-    const hoy = startOfDay(new Date());
+    const diasDiferencia = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Limitar a máximo 30 días para no sobrecargar
+    const diasAMostrar = Math.min(diasDiferencia + 1, 30);
 
-    for (let i = 6; i >= 0; i--) {
-      const fecha = subDays(hoy, i);
-      const ventasDia = await this.getVentasDia(fecha);
+    for (let i = 0; i < diasAMostrar; i++) {
+      const fecha = new Date(inicio);
+      fecha.setDate(fecha.getDate() + i);
+      
+      const siguienteDia = new Date(fecha);
+      siguienteDia.setDate(siguienteDia.getDate() + 1);
+
+      const pedidos = await this.prisma.pedido.findMany({
+        where: {
+          fechaProduccion: {
+            gte: startOfDay(fecha),
+            lt: startOfDay(siguienteDia),
+          },
+        },
+        select: {
+          montoTotal: true,
+        },
+      });
+
+      const total = pedidos.reduce((sum, p) => sum + Number(p.montoTotal), 0);
+      
       resultado.push({
         fecha: format(fecha, 'dd/MM'),
-        total: ventasDia.total,
+        total,
       });
     }
 
     return resultado;
   }
 
-  private async getTopProductos(limit: number) {
+  private async getTopProductos(limit: number, inicio: Date, fin: Date) {
     const pedidos = await this.prisma.pedido.findMany({
+      where: {
+        fechaProduccion: {
+          gte: inicio,
+          lte: fin,
+        },
+      },
       select: {
         detalles: true,
       },
     });
 
-    // Agrupar productos y contar
     const productosMap = new Map<string, { cantidad: number; ventas: number }>();
 
     pedidos.forEach((pedido) => {
@@ -203,7 +253,6 @@ export class DashboardService {
       }
     });
 
-    // Convertir a array y ordenar
     const productos = Array.from(productosMap.entries())
       .map(([producto, data]) => ({
         producto,
@@ -216,8 +265,14 @@ export class DashboardService {
     return productos;
   }
 
-  private async getVentasPorRuta() {
+  private async getVentasPorRuta(inicio: Date, fin: Date) {
     const pedidos = await this.prisma.pedido.findMany({
+      where: {
+        fechaProduccion: {
+          gte: inicio,
+          lte: fin,
+        },
+      },
       include: {
         sucursal: {
           include: {
@@ -227,7 +282,6 @@ export class DashboardService {
       },
     });
 
-    // Agrupar por ruta
     const rutasMap = new Map<string, number>();
 
     pedidos.forEach((pedido) => {
@@ -241,8 +295,14 @@ export class DashboardService {
       .sort((a, b) => b.total - a.total);
   }
 
-  private async getPedidosRecientes(limit: number) {
+  private async getPedidosRecientes(limit: number, inicio: Date, fin: Date) {
     return await this.prisma.pedido.findMany({
+      where: {
+        fechaProduccion: {
+          gte: inicio,
+          lte: fin,
+        },
+      },
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {

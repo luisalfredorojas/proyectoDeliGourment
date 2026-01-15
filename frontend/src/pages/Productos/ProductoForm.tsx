@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { Save as SaveIcon, ArrowBack, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import { productosService, Producto, MateriaPrimaRequerida } from '../../services/productosService';
+import { productosService, MateriaPrimaRequerida } from '../../services/productosService';
 import { materiasPrimasService, MateriaPrima } from '../../services/materiasPrimasService';
 
 const ProductoForm: React.FC = () => {

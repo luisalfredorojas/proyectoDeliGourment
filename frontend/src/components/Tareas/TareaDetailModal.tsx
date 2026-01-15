@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, IconButton, Box, Typography, Chip, Grid, Paper,
-  TextField, Button, Select, MenuItem, FormControl, InputLabel, Divider, Avatar, Alert, CircularProgress, DialogActions,
+  TextField, Button, Select, MenuItem, FormControl, InputLabel, Divider, Avatar, DialogActions,
 } from '@mui/material';
-import { Close as CloseIcon, History as HistoryIcon, Send as SendIcon, Person as PersonIcon, AttachMoney as MoneyIcon, Cancel as CancelIcon } from '@mui/icons-material';
+import { Close as CloseIcon, History as HistoryIcon, Send as SendIcon, AttachMoney as MoneyIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { tareasService } from '../../services/tareasService';
-import { Tarea, TareaEstado, TipoComentario, ComentarioTarea, HistorialEstado } from '../../types/entities';
+import { Tarea, TareaEstado, TipoComentario } from '../../types/entities';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '../../hooks/useAuth';

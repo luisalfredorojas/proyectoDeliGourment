@@ -18,6 +18,7 @@ import {
   ShoppingCart as CartIcon,
   ViewKanban as KanbanIcon,
   Settings as SettingsIcon,
+  Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -25,28 +26,40 @@ import RoleBadge from './RoleBadge';
 import { UserRole } from '../types/auth';
 
 const AppBar: React.FC = () => {
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-
-  const handleMenu = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
-  const handleClose = () => setAnchorEl(null);
-  const handleLogout = () => { handleClose(); logout(); };
-  const handleNavigate = (path: string) => { 
-    handleClose(); 
-    navigate(path); 
-  };
 
   if (!user) return null;
 
-  const getInitials = (name: string) => name.split(' ').map((n) => n[0]).join('').toUpperCase().substring(0, 2);
-  const isAdmin = user.rol === UserRole.ADMIN;
-  const canManage = isAdmin || user.rol === UserRole.ASISTENTE;
+  const canManage = user.rol === UserRole.ADMIN || user.rol === UserRole.ASISTENTE;
+
+  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    handleClose();
+  };
+
+  const handleLogout = () => {
+    logout();
+    handleClose();
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+  };
 
   return (
-    <MuiAppBar position="sticky" elevation={1}>
+    <MuiAppBar position="sticky" elevation={2}>
       <Toolbar>
-        <Typography variant="h6" sx={{ fontWeight: 'bold', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
+        <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
           🥖 DeliGourmet
         </Typography>
 
@@ -54,6 +67,7 @@ const AppBar: React.FC = () => {
           <Button color="inherit" onClick={() => navigate('/dashboard')} startIcon={<DashboardIcon />}>Dashboard</Button>
           <Button color="inherit" onClick={() => navigate('/pedidos')} startIcon={<CartIcon />}>Pedidos</Button>
           <Button color="inherit" onClick={() => navigate('/tareas')} startIcon={<KanbanIcon />}>Tareas</Button>
+          {canManage && <Button color="inherit" onClick={() => navigate('/reportes')} startIcon={<AssessmentIcon />}>Reportes</Button>}
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

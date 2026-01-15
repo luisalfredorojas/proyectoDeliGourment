@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card, CardContent, Typography, Chip, Box, Avatar, IconButton } from '@mui/material';
-import { Comment as CommentIcon, AttachMoney as MoneyIcon, Route as RouteIcon, Store as StoreIcon, Person as PersonIcon, DragIndicator as DragIcon } from '@mui/icons-material';
+import { Card, CardContent, Typography, Chip, Box, Avatar } from '@mui/material';
+import { Comment as CommentIcon, AttachMoney as MoneyIcon, Route as RouteIcon, Store as StoreIcon, DragIndicator as DragIcon } from '@mui/icons-material';
 import { Tarea } from '../../types/entities';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';

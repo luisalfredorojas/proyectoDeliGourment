@@ -33,7 +33,11 @@ export interface VentaRuta {
 }
 
 export interface AdminStats {
-  ventasHoy: VentasHoy;
+  ventasRango: VentasHoy;
+  periodo: {
+    inicio: string;
+    fin: string;
+  };
   tareasPorEstado: TareasPorEstado;
   productosAProducir: number;
   ventasPorDia: VentaDia[];
@@ -48,8 +52,12 @@ export interface TareasOperativas {
 }
 
 class DashboardService {
-  async getAdminStats(): Promise<AdminStats> {
-    const response = await api.get('/dashboard/stats');
+  async getAdminStats(fechaInicio?: string, fechaFin?: string): Promise<AdminStats> {
+    const params = new URLSearchParams();
+    if (fechaInicio) params.append('fechaInicio', fechaInicio);
+    if (fechaFin) params.append('fechaFin', fechaFin);
+    
+    const response = await api.get(`/dashboard/stats?${params.toString()}`);
     return response.data;
   }
 

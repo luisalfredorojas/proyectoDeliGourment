@@ -20,6 +20,12 @@ import ProductoForm from './pages/Productos/ProductoForm';
 import TareasKanban from './pages/Tareas/TareasKanban';
 import UsersList from './pages/Users/UsersList';
 import ConfiguracionesPage from './pages/Configuraciones/ConfiguracionesPage';
+import ReportesPage from './pages/Reportes/ReportesPage';
+import ProductionReports from './pages/Reportes/ProductionReports';
+import SalesReports from './pages/Reportes/SalesReports';
+import DeliveryReports from './pages/Reportes/DeliveryReports';
+import ConsignmentReports from './pages/Reportes/ConsignmentReports';
+import OperationalReports from './pages/Reportes/OperationalReports';
 
 import { UserRole } from './types/auth';
 
@@ -51,34 +57,18 @@ function App() {
         <Route path="/sucursales/new" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><SucursalForm /></ProtectedRoute>} />
         <Route path="/sucursales/:id/edit" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><SucursalForm /></ProtectedRoute>} />
 
+        {/* Pedidos */}
+        <Route path="/pedidos" element={<ProtectedRoute><PedidosList /></ProtectedRoute>} />
+        <Route path="/pedidos/new" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><PedidoForm /></ProtectedRoute>} />
+        <Route path="/pedidos/:id/edit" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><PedidoForm /></ProtectedRoute>} />
+
         {/* Materias Primas */}
-        <Route path="/materias-primas" element={
-          <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PRODUCCION]}>
-            <MateriasPrimasList />
-          </ProtectedRoute>
-        } />
+        <Route path="/materias-primas" element={<ProtectedRoute><MateriasPrimasList /></ProtectedRoute>} />
 
         {/* Productos */}
-        <Route path="/productos" element={
-          <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PRODUCCION]}>
-            <ProductosList />
-          </ProtectedRoute>
-        } />
-        <Route path="/productos/nuevo" element={
-          <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PRODUCCION]}>
-            <ProductoForm />
-          </ProtectedRoute>
-        } />
-        <Route path="/productos/editar/:id" element={
-          <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PRODUCCION]}>
-            <ProductoForm />
-          </ProtectedRoute>
-        } />
-
-        {/* Pedidos */}
-        <Route path="/pedidos" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><PedidosList /></ProtectedRoute>} />
-        <Route path="/pedidos/new" element={<ProtectedRoute allowedRoles={[UserRole.ASISTENTE, UserRole.ADMIN]}><PedidoForm /></ProtectedRoute>} />
-        <Route path="/pedidos/editar/:id" element={<ProtectedRoute allowedRoles={[UserRole.ASISTENTE, UserRole.ADMIN]}><PedidoForm /></ProtectedRoute>} />
+        <Route path="/productos" element={<ProtectedRoute><ProductosList /></ProtectedRoute>} />
+        <Route path="/productos/new" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><ProductoForm /></ProtectedRoute>} />
+        <Route path="/productos/:id/edit" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><ProductoForm /></ProtectedRoute>} />
 
         {/* Tareas */}
         <Route path="/tareas" element={<ProtectedRoute><TareasKanban /></ProtectedRoute>} />
@@ -86,6 +76,14 @@ function App() {
         {/* Users */}
         <Route path="/usuarios" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]}><UsersList /></ProtectedRoute>} />
         <Route path="/register" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]}><Register /></ProtectedRoute>} />
+
+        {/* Reportes */}
+        <Route path="/reportes" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><ReportesPage /></ProtectedRoute>} />
+        <Route path="/reportes/produccion" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><ProductionReports /></ProtectedRoute>} />
+        <Route path="/reportes/ventas" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><SalesReports /></ProtectedRoute>} />
+        <Route path="/reportes/entregas" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><DeliveryReports /></ProtectedRoute>} />
+        <Route path="/reportes/consignaciones" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><ConsignmentReports /></ProtectedRoute>} />
+        <Route path="/reportes/operativos" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><OperationalReports /></ProtectedRoute>} />
 
         <Route path="/" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
