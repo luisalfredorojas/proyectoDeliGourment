@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container, Paper, Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Box, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, TextField
@@ -9,6 +10,7 @@ import { toast } from 'react-toastify';
 import { materiasPrimasService, MateriaPrima } from '../../services/materiasPrimasService';
 
 const MateriasPrimasList: React.FC = () => {
+  const navigate = useNavigate();
   const [materias, setMaterias] = useState<MateriaPrima[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);

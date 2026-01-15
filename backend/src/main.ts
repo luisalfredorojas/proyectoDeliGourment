@@ -8,7 +8,12 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: [
+      'http://localhost:5173', 
+      'http://localhost:3000',
+      // Railway production URLs (will be configured via environment variables)
+      process.env.FRONTEND_URL || '',
+    ].filter(Boolean), // Remove empty strings
     credentials: true,
   });
 

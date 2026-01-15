@@ -45,7 +45,6 @@ const RutaForm: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors },
-    reset,
     setValue,
   } = useForm<RutaFormValues>({
     resolver: zodResolver(rutaSchema),
