@@ -14,6 +14,32 @@ async function bootstrap() {
   ].filter(Boolean);
   
   console.log('CORS configured with allowed origins:', allowedOrigins);
+
+  // Add raw middleware to handle preflight requests
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    
+    // Check if origin is allowed
+    const isAllowed = !origin || 
+                      allowedOrigins.includes(origin) || 
+                      origin.endsWith('.vercel.app');
+    
+    if (isAllowed && origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept,Origin,X-Requested-With');
+      res.setHeader('Access-Control-Expose-Headers', 'Authorization');
+    }
+    
+    // Handle preflight OPTIONS request
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+      return res.status(204).end();
+    }
+    
+    next();
+  });
   
   app.enableCors({
     origin: (origin, callback) => {
