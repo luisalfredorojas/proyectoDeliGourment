@@ -65,6 +65,7 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
   console.log(`Application is running on: http://0.0.0.0:${port}`);
   console.log(`Swagger docs available at: http://0.0.0.0:${port}/api/docs`);
+  console.log('🚀 Deployment successful - 2026-01-21 01:24');
 }
 
 bootstrap();
