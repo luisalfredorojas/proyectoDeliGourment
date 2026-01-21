@@ -1,5 +1,5 @@
 # Multi-stage build for NestJS application
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 # Set working directory
 WORKDIR /app
@@ -21,7 +21,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine
+FROM node:20-slim
 
 # Set working directory
 WORKDIR /app
