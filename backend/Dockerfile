@@ -23,6 +23,9 @@ RUN npm run build
 # Production stage
 FROM node:20-slim
 
+# Install OpenSSL 1.1 for Prisma
+RUN apt-get update && apt-get install -y openssl libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
+
 # Set working directory
 WORKDIR /app
 
