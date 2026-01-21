@@ -6,34 +6,9 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Log all incoming requests for debugging
-  app.use((req, res, next) => {
-    console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
-    
-    // Handle OPTIONS requests immediately
-    if (req.method === 'OPTIONS') {
-      console.log('🔍 Handling OPTIONS preflight request');
-      const origin = req.headers.origin;
-      
-      if (origin) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-        res.setHeader('Access-Control-Allow-Credentials', 'true');
-        res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept,Origin,X-Requested-With');
-        res.setHeader('Access-Control-Max-Age', '86400');
-      }
-      
-      return res.status(204).end();
-    }
-    
-    next();
-  });
-
-  // Temporarily accept all origins for debugging
-  console.log('CORS: Accepting all origins (DEBUG MODE)');
-  
+  // CORS configuration - accepting all origins for simplicity
   app.enableCors({
-    origin: true, // Accept all origins temporarily
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
