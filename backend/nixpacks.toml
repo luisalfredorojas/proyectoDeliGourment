@@ -9,3 +9,6 @@ cmds = ['npx prisma generate', 'npm run build']
 
 [start]
 cmd = 'npm run start:prod'
+
+[[ports]]
+port = 3000
