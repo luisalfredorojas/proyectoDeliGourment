@@ -16,15 +16,25 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private configService: ConfigService,
     private prisma: PrismaService,
   ) {
+    // Debug logging
+    console.log('🔑 JWT_SECRET available:', !!process.env.JWT_SECRET);
+    console.log('🔑 JWT_SECRET length:', process.env.JWT_SECRET?.length || 0);
+    console.log('🔑 All env vars:', Object.keys(process.env).filter(k => k.includes('JWT')));
+    
+    const jwtSecret = process.env.JWT_SECRET;
+    
+    if (!jwtSecret) {
+      console.error('❌ JWT_SECRET is not defined!');
+      throw new Error('JWT_SECRET environment variable is not defined');
+    }
+    
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET,
+      secretOrKey: jwtSecret,
     });
     
-    if (!process.env.JWT_SECRET) {
-      throw new Error('JWT_SECRET environment variable is not defined');
-    }
+    console.log('✅ JwtStrategy initialized successfully');
   }
 
   async validate(payload: JwtPayload) {
