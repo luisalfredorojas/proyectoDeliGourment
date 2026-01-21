@@ -5,7 +5,7 @@ import {
   IconButton, Chip, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Button,
   TextField, MenuItem, Select, FormControl, InputLabel, Switch,
 } from '@mui/material';
-import { Edit as EditIcon, People as PeopleIcon, ArrowBack } from '@mui/icons-material';
+import { Edit as EditIcon, People as PeopleIcon, ArrowBack, PersonAdd as PersonAddIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { usersService, User, UpdateUserDto } from '../../services/usersService';
 import { UserRole } from '../../types/auth';
@@ -32,6 +32,10 @@ const UsersList: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCreateUser = () => {
+    navigate('/register');
   };
 
   const handleEditClick = (user: User) => {
@@ -106,12 +110,23 @@ const UsersList: React.FC = () => {
       <Button startIcon={<ArrowBack />} onClick={() => navigate('/configuraciones')} sx={{ mb: 2 }}>
         Regresar a Configuraciones
       </Button>
-      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <PeopleIcon sx={{ fontSize: 40, color: 'primary.main' }} />
-        <div>
-          <Typography variant="h4" fontWeight="bold">Gestión de Usuarios</Typography>
-          <Typography variant="body2" color="text.secondary">Administra los usuarios del sistema</Typography>
-        </div>
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <PeopleIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+          <div>
+            <Typography variant="h4" fontWeight="bold">Gestión de Usuarios</Typography>
+            <Typography variant="body2" color="text.secondary">Administra los usuarios del sistema</Typography>
+          </div>
+        </Box>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<PersonAddIcon />}
+          onClick={handleCreateUser}
+          sx={{ minWidth: 160 }}
+        >
+          Nuevo Usuario
+        </Button>
       </Box>
 
       <Paper elevation={2} sx={{ p: 3 }}>
