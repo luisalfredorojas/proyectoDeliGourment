@@ -13,6 +13,7 @@ import { ProductosModule } from './modules/productos/productos.module';
 import { UsersModule } from './modules/users/users.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ReportesModule } from './modules/reportes/reportes.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -32,7 +33,7 @@ import { ReportesModule } from './modules/reportes/reportes.module';
     DashboardModule,
     ReportesModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [],
 })
 export class AppModule {}
