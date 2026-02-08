@@ -49,4 +49,12 @@ export class CreateSucursalDto {
   @IsString({ message: 'El teléfono debe ser un texto' })
   @IsOptional()
   telefono?: string;
+
+  @ApiPropertyOptional({
+    description: 'Ubicación o coordenadas GPS de la sucursal',
+    example: '-12.0464, -77.0428',
+  })
+  @IsString({ message: 'La ubicación debe ser un texto' })
+  @IsOptional()
+  ubicacion?: string;
 }
