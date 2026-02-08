@@ -57,7 +57,7 @@ const ProductosList: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate('/productos/nuevo')}
+          onClick={() => navigate('/productos/new')}
         >
           Nuevo Producto
         </Button>
@@ -80,7 +80,7 @@ const ProductosList: React.FC = () => {
                 <TableCell>$ {Number(producto.precio).toFixed(2)}</TableCell>
                 <TableCell>{producto.descripcion || '-'}</TableCell>
                 <TableCell align="right">
-                  <IconButton color="primary" onClick={() => navigate(`/productos/editar/${producto.id}`)}>
+                  <IconButton color="primary" onClick={() => navigate(`/productos/${producto.id}/edit`)}>
                     <EditIcon />
                   </IconButton>
                   <IconButton color="error" onClick={() => handleDelete(producto.id)}>
