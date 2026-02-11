@@ -116,10 +116,11 @@ export interface Pedido {
   fechaRecepcion: string;
   fechaProduccion: string;
   detalles: DetalleProducto[];
-  consignaciones?: { producto: string; cantidad: number }[];
+  consignaciones?: { producto: string; cantidad: number; precioUnitario: number }[];
   montoTotal: number;
   observaciones?: string;
   fueraDeHorario: boolean;
+  soloConsignaciones?: boolean;
   creadoPorId: string;
   createdAt: string;
   updatedAt: string;
@@ -149,7 +150,8 @@ export interface Pedido {
 export interface CreatePedidoData {
   sucursalId: string;
   detalles: DetalleProducto[];
-  consignaciones?: { producto: string; cantidad: number }[];
+  consignaciones?: { producto: string; cantidad: number; precioUnitario: number }[];
+  soloConsignaciones?: boolean;
   observaciones?: string;
 }
 

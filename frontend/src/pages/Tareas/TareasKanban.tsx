@@ -278,7 +278,7 @@ const TareasKanban: React.FC = () => {
       {/* Production Summary */}
       {(() => {
         const summary = getProductionSummary();
-        return summary.products.length > 0 ? (
+        return (summary.products.length > 0 || summary.consignments.length > 0) ? (
           <Box sx={{ mb: 3 }}>
             <Paper elevation={2} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>

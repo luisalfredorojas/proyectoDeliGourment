@@ -8,6 +8,8 @@ import {
   ArrayMinSize,
   IsInt,
   Min,
+  IsBoolean,
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -42,6 +44,11 @@ class DetalleConsignacionDto {
   @IsInt()
   @Min(1)
   cantidad: number;
+
+  @ApiProperty({ description: 'Precio unitario', example: 1.5 })
+  @IsNumber()
+  @Min(0)
+  precioUnitario: number;
 }
 
 export class CreatePedidoDto {
@@ -68,6 +75,14 @@ export class CreatePedidoDto {
   @ValidateNested({ each: true })
   @Type(() => DetalleConsignacionDto)
   consignaciones?: DetalleConsignacionDto[];
+
+  @ApiPropertyOptional({
+    description: 'Indica si el pedido es solo de consignaciones (sin productos a producir)',
+    example: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  soloConsignaciones?: boolean;
 
   @ApiPropertyOptional({
     description: 'Observaciones adicionales',

@@ -180,8 +180,11 @@ const PedidosList: React.FC = () => {
                 {filteredPedidos.map((pedido) => (
                   <TableRow key={pedido.id} hover>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                         {pedido.sucursal?.cliente?.razonSocial}
+                        {pedido.soloConsignaciones && (
+                          <Chip icon={<span>🔄</span>} label="Solo Consignaciones" size="small" sx={{ bgcolor: '#fef3c7', color: '#92400e', borderColor: '#f59e0b' }} variant="outlined" />
+                        )}
                         {pedido.fueraDeHorario && (
                           <Chip icon={<WarningIcon />} label="Fuera horario" size="small" color="warning" />
                         )}

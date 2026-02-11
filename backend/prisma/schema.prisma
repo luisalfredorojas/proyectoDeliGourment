@@ -111,18 +111,19 @@ model Sucursal {
 
 // Modelo de Pedido
 model Pedido {
-  id              String   @id @default(uuid())
-  sucursalId      String
-  fechaRecepcion  DateTime @default(now()) // Cuando se creó el pedido
-  fechaProduccion DateTime // Día para el cual se va a producir (puede ser hoy o mañana)
-  detalles        Json     // [{producto: string, cantidad: number, precioUnitario: number}]
-  consignaciones  Json?    // [{producto: string, cantidad: number}] - Items de consignación (no producir)
-  montoTotal      Decimal  @db.Decimal(10, 2)
-  observaciones   String?  @db.Text
-  fueraDeHorario  Boolean  @default(false) // True si se creó después de 11:30 AM
-  creadoPorId     String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  sucursalId         String
+  fechaRecepcion     DateTime @default(now()) // Cuando se creó el pedido
+  fechaProduccion    DateTime // Día para el cual se va a producir (puede ser hoy o mañana)
+  detalles           Json     // [{producto: string, cantidad: number, precioUnitario: number}]
+  consignaciones     Json?    // [{producto: string, cantidad: number, precioUnitario: number}] - Items de consignación (no producir)
+  montoTotal         Decimal  @db.Decimal(10, 2)
+  observaciones      String?  @db.Text
+  fueraDeHorario     Boolean  @default(false) // True si se creó después de 11:30 AM
+  soloConsignaciones Boolean  @default(false) // True si el pedido solo contiene consignaciones (sin producción)
+  creadoPorId        String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   // Relaciones
   sucursal  Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)

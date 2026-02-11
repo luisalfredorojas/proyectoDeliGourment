@@ -22,6 +22,30 @@ export class PedidosService {
       throw new NotFoundException('Sucursal no encontrada');
     }
 
+    // Validate consignment-only orders
+    const soloConsignaciones = createPedidoDto.soloConsignaciones || false;
+    
+    if (soloConsignaciones) {
+      // If it's consignment-only, detalles must be empty and consignaciones must have at least 1 item
+      if (createPedidoDto.detalles && createPedidoDto.detalles.length > 0) {
+        throw new BadRequestException(
+          'Un pedido de solo consignaciones no puede tener productos regulares. Deseleccione productos o desactive "Solo Consignaciones".',
+        );
+      }
+      if (!createPedidoDto.consignaciones || createPedidoDto.consignaciones.length === 0) {
+        throw new BadRequestException(
+          'Un pedido de solo consignaciones debe tener al menos una consignación.',
+        );
+      }
+    } else {
+      // If it's a regular order, detalles must have at least 1 item
+      if (!createPedidoDto.detalles || createPedidoDto.detalles.length === 0) {
+        throw new BadRequestException(
+          'Un pedido regular debe tener al menos un producto.',
+        );
+      }
+    }
+
     // Check time and calculate fechaProduccion
     const now = new Date();
     const fueraDeHorario = this.isFueraDeHorario(now);
@@ -32,18 +56,23 @@ export class PedidosService {
     // Assistant: If > 11:30 AM, next day.
     const fechaProduccion = this.calculateFechaProduccion(now, fueraDeHorario, isAdmin);
 
-    // Calculate montoTotal
-    const montoTotal = this.calculateMontoTotal(createPedidoDto.detalles);
+    // Calculate montoTotal based on order type
+    const montoTotal = this.calculateMontoTotal(
+      createPedidoDto.detalles || [],
+      createPedidoDto.consignaciones || [],
+      soloConsignaciones,
+    );
 
     // Create pedido
     const pedido = await this.prisma.pedido.create({
       data: {
         sucursalId: createPedidoDto.sucursalId,
-        detalles: createPedidoDto.detalles as any,
+        detalles: (createPedidoDto.detalles || []) as any,
         consignaciones: (createPedidoDto.consignaciones || []) as any,
         montoTotal,
         observaciones: createPedidoDto.observaciones,
         fueraDeHorario: fueraDeHorario && !isAdmin, // Only mark as "late" if it affects production date (Assistant)
+        soloConsignaciones,
         fechaProduccion,
         creadoPorId: userId,
       },
@@ -192,10 +221,15 @@ export class PedidosService {
       }
     }
 
-    // Recalculate montoTotal if detalles changed
+    // Recalculate montoTotal if detalles or consignaciones changed
     const updateData: any = { ...updatePedidoDto };
-    if (updatePedidoDto.detalles) {
-      updateData.montoTotal = this.calculateMontoTotal(updatePedidoDto.detalles);
+    if (updatePedidoDto.detalles || updatePedidoDto.consignaciones || updatePedidoDto.soloConsignaciones !== undefined) {
+      const soloConsignaciones = updatePedidoDto.soloConsignaciones ?? pedido.soloConsignaciones ?? false;
+      updateData.montoTotal = this.calculateMontoTotal(
+        updatePedidoDto.detalles || (pedido.detalles as any) || [],
+        updatePedidoDto.consignaciones || (pedido.consignaciones as any) || [],
+        soloConsignaciones,
+      );
     }
 
     return this.prisma.pedido.update({
@@ -260,10 +294,22 @@ export class PedidosService {
     return fecha;
   }
 
-  private calculateMontoTotal(detalles: any[]): number {
-    return detalles.reduce((total, item) => {
-      return total + item.cantidad * item.precioUnitario;
-    }, 0);
+  private calculateMontoTotal(
+    detalles: any[],
+    consignaciones: any[],
+    soloConsignaciones: boolean,
+  ): number {
+    if (soloConsignaciones) {
+      // For consignment-only orders, calculate total from consignaciones
+      return consignaciones.reduce((total, item) => {
+        return total + (item.cantidad * item.precioUnitario || 0);
+      }, 0);
+    } else {
+      // For regular orders, calculate total from detalles
+      return detalles.reduce((total, item) => {
+        return total + (item.cantidad * item.precioUnitario || 0);
+      }, 0);
+    }
   }
 
   private canModifyFechaProduccion(now: Date, isAdmin: boolean): boolean {

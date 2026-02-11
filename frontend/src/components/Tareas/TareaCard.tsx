@@ -1,8 +1,7 @@
-import React from 'react';
 import { Card, CardContent, Typography, Chip, Box, Avatar } from '@mui/material';
-import { Comment as CommentIcon, AttachMoney as MoneyIcon, Route as RouteIcon, Store as StoreIcon, DragIndicator as DragIcon } from '@mui/icons-material';
+import { Comment as CommentIcon, AttachMoney as MoneyIcon, Route as RouteIcon, Store as StoreIcon, DragIndicator as DragIcon, CalendarToday as CalendarIcon } from '@mui/icons-material';
 import { Tarea } from '../../types/entities';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -39,6 +38,9 @@ const TareaCard: React.FC<TareaCardProps> = ({ tarea, onClick }) => {
       sx={{ 
         mb: 2, 
         cursor: 'pointer',
+        bgcolor: tarea.pedido?.soloConsignaciones ? '#fffbea' : 'white',
+        borderLeft: tarea.pedido?.soloConsignaciones ? 4 : 0,
+        borderColor: tarea.pedido?.soloConsignaciones ? '#f59e0b' : 'transparent',
         '&:hover': { 
           boxShadow: 4,
           transform: 'translateY(-2px)',
@@ -107,18 +109,26 @@ const TareaCard: React.FC<TareaCardProps> = ({ tarea, onClick }) => {
               </Box>
             )}
 
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-              <Typography variant="caption" color="text.secondary">
-                {formatDistanceToNow(new Date(tarea.fechaCreacion), { addSuffix: true, locale: es })}
-              </Typography>
-              {tarea._count && tarea._count.comentarios > 0 && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <CommentIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                  <Typography variant="caption" color="text.secondary">
-                    {tarea._count.comentarios}
-                  </Typography>
-                </Box>
-              )}
+            <Box sx={{ mt: 1, pt: 1, borderTop: 1, borderColor: 'divider' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                <CalendarIcon sx={{ fontSize: 12, color: 'text.secondary' }} />
+                <Typography variant="caption" color="text.secondary">
+                  {format(new Date(tarea.fechaCreacion), 'dd/MM/yyyy HH:mm', { locale: es })}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  {formatDistanceToNow(new Date(tarea.fechaCreacion), { addSuffix: true, locale: es })}
+                </Typography>
+                {tarea._count && tarea._count.comentarios > 0 && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <CommentIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                    <Typography variant="caption" color="text.secondary">
+                      {tarea._count.comentarios}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
             </Box>
           </Box>
         </Box>

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   Container, Paper, Typography, TextField, Button, Box, Grid, Autocomplete,
   IconButton, Alert, CircularProgress, Table, TableHead, TableRow, TableCell, TableBody,
+  FormControlLabel, Checkbox,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, ArrowBack, Save as SaveIcon, Cancel as CancelIcon, Warning as WarningIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
@@ -24,7 +25,8 @@ const PedidoForm: React.FC = () => {
   
   // DetalleProducto now includes optional productoId
   const [detalles, setDetalles] = useState<DetalleProducto[]>([{ producto: '', cantidad: 1, precioUnitario: 0 }]);
-  const [consignaciones, setConsignaciones] = useState<{ producto: string; cantidad: number }[]>([]);
+  const [consignaciones, setConsignaciones] = useState<{ producto: string; cantidad: number; precioUnitario: number }[]>([]);
+  const [soloConsignaciones, setSoloConsignaciones] = useState(false);
   const [observaciones, setObservaciones] = useState('');
   const [showWarning, setShowWarning] = useState(false);
 
@@ -70,7 +72,12 @@ const PedidoForm: React.FC = () => {
 
       // Setear consignaciones
       if (pedido.consignaciones && Array.isArray(pedido.consignaciones)) {
-        setConsignaciones(pedido.consignaciones as { producto: string; cantidad: number }[]);
+        setConsignaciones(pedido.consignaciones as { producto: string; cantidad: number; precioUnitario: number }[]);
+      }
+
+      // Setear soloConsignaciones
+      if (pedido.soloConsignaciones) {
+        setSoloConsignaciones(true);
       }
 
       // Setear observaciones
@@ -135,20 +142,41 @@ const PedidoForm: React.FC = () => {
   };
 
   const handleAddConsignacion = () => {
-    setConsignaciones([...consignaciones, { producto: '', cantidad: 1 }]);
+    setConsignaciones([...consignaciones, { producto: '', cantidad: 1, precioUnitario: 0 }]);
   };
 
   const handleRemoveConsignacion = (index: number) => {
     setConsignaciones(consignaciones.filter((_, i) => i !== index));
   };
 
-  const handleConsignacionChange = (index: number, field: 'producto' | 'cantidad', value: any) => {
+  const handleConsignacionChange = (index: number, field: 'producto' | 'cantidad' | 'precioUnitario', value: any) => {
     const newConsignaciones = [...consignaciones];
     newConsignaciones[index] = { ...newConsignaciones[index], [field]: value };
     setConsignaciones(newConsignaciones);
   };
 
+  const handleConsignacionProductSelect = (index: number, producto: Producto | null) => {
+    const newConsignaciones = [...consignaciones];
+    if (producto) {
+      newConsignaciones[index] = {
+        ...newConsignaciones[index],
+        producto: producto.nombre,
+        precioUnitario: Number(producto.precio),
+      };
+    } else {
+      newConsignaciones[index] = {
+        ...newConsignaciones[index],
+        producto: '',
+        precioUnitario: 0,
+      };
+    }
+    setConsignaciones(newConsignaciones);
+  };
+
   const calcularMontoTotal = () => {
+    if (soloConsignaciones) {
+      return consignaciones.reduce((total, c) => total + (c.cantidad * c.precioUnitario), 0);
+    }
     return detalles.reduce((total, d) => total + (d.cantidad * d.precioUnitario), 0);
   };
 
@@ -170,8 +198,9 @@ const PedidoForm: React.FC = () => {
     try {
       const pedidoData = {
         sucursalId: selectedSucursal.id,
-        detalles,
+        detalles: soloConsignaciones ? [] : detalles,
         consignaciones: consignaciones.length > 0 ? consignaciones : undefined,
+        soloConsignaciones,
         observaciones: observaciones.trim() || undefined,
       };
 
@@ -235,6 +264,38 @@ const PedidoForm: React.FC = () => {
               />
             </Grid>
 
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={soloConsignaciones}
+                    onChange={(e) => {
+                      setSoloConsignaciones(e.target.checked);
+                      if (e.target.checked) {
+                        // Clear products when switching to consignment-only
+                        setDetalles([]);
+                      } else {
+                        // Add at least one product row when switching back
+                        if (detalles.length === 0) {
+                          setDetalles([{ producto: '', cantidad: 1, precioUnitario: 0 }]);
+                        }
+                      }
+                    }}
+                    color="warning"
+                  />
+                }
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography>🔄 Solo Consignaciones</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      (Sin productos a producir)
+                    </Typography>
+                  </Box>
+                }
+              />
+            </Grid>
+
+            {!soloConsignaciones && (
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 Productos
@@ -321,8 +382,9 @@ const PedidoForm: React.FC = () => {
                 </TableBody>
               </Table>
             </Grid>
+            )}
 
-            {/* Consignaciones Section */}
+
             <Grid item xs={12}>
               <Paper elevation={2} sx={{ p: 3, bgcolor: '#fffbea', borderLeft: 4, borderColor: '#f59e0b' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -345,7 +407,9 @@ const PedidoForm: React.FC = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell>Producto</TableCell>
-                        <TableCell width={150}>Cantidad</TableCell>
+                        <TableCell width={120}>Cantidad</TableCell>
+                        <TableCell width={150}>Precio Unit.</TableCell>
+                        <TableCell width={150}>Subtotal</TableCell>
                         <TableCell width={80}>Acción</TableCell>
                       </TableRow>
                     </TableHead>
@@ -357,7 +421,15 @@ const PedidoForm: React.FC = () => {
                               options={productos}
                               getOptionLabel={(option) => typeof option === 'string' ? option : option.nombre}
                               value={productos.find(p => p.nombre === cons.producto) || null}
-                              onChange={(_, value) => handleConsignacionChange(index, 'producto', typeof value === 'string' ? value : value?.nombre || '')}
+                              onChange={(_, value) => {
+                                if (typeof value === 'string') {
+                                  handleConsignacionChange(index, 'producto', value);
+                                } else if (value) {
+                                  handleConsignacionProductSelect(index, value);
+                                } else {
+                                  handleConsignacionChange(index, 'producto', '');
+                                }
+                              }}
                               freeSolo
                               onInputChange={(_, newInputValue, reason) => {
                                 if (reason === 'input' && !productos.some(p => p.nombre === newInputValue)) {
@@ -381,6 +453,18 @@ const PedidoForm: React.FC = () => {
                             />
                           </TableCell>
                           <TableCell>
+                            <TextField
+                              type="number"
+                              size="small"
+                              fullWidth
+                              value={cons.precioUnitario}
+                              onChange={(e) => handleConsignacionChange(index, 'precioUnitario', parseFloat(e.target.value) || 0)}
+                              inputProps={{ min: 0, step: 0.01 }}
+                              onFocus={(e) => e.target.select()}
+                            />
+                          </TableCell>
+                          <TableCell>$ {(cons.cantidad * cons.precioUnitario).toFixed(2)}</TableCell>
+                          <TableCell>
                             <IconButton
                               size="small"
                               color="error"
@@ -391,6 +475,13 @@ const PedidoForm: React.FC = () => {
                           </TableCell>
                         </TableRow>
                       ))}
+                      {soloConsignaciones && (
+                        <TableRow>
+                          <TableCell colSpan={3} align="right"><strong>TOTAL:</strong></TableCell>
+                          <TableCell><strong>$ {montoTotal.toFixed(2)}</strong></TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 ) : (
