@@ -1,64 +1,75 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { startOfDay, endOfDay, subDays, format } from 'date-fns';
 
 @Injectable()
 export class DashboardService {
+  private readonly logger = new Logger(DashboardService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async getAdminStats(fechaInicio?: string, fechaFin?: string) {
-    // Si no se proporcionan fechas, usar el día actual
-    const inicio = fechaInicio ? new Date(fechaInicio) : startOfDay(new Date());
-    const fin = fechaFin ? endOfDay(new Date(fechaFin)) : endOfDay(new Date());
+    try {
+      this.logger.log(`getAdminStats called with fechaInicio=${fechaInicio}, fechaFin=${fechaFin}`);
 
-    // Ventas del rango seleccionado
-    const ventasRango = await this.getVentasRango(inicio, fin);
-    
-    // Calcular comparación con período anterior (mismo número de días)
-    const diasDiferencia = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
-    const inicioAnterior = subDays(inicio, diasDiferencia);
-    const finAnterior = subDays(fin, diasDiferencia);
-    const ventasAnterior = await this.getVentasRango(inicioAnterior, finAnterior);
-    
-    const comparacionAnterior = ventasAnterior.total > 0 
-      ? ((ventasRango.total - ventasAnterior.total) / ventasAnterior.total) * 100 
-      : 0;
+      // Si no se proporcionan fechas, usar el día actual
+      const inicio = fechaInicio ? startOfDay(new Date(fechaInicio + 'T00:00:00')) : startOfDay(new Date());
+      const fin = fechaFin ? endOfDay(new Date(fechaFin + 'T00:00:00')) : endOfDay(new Date());
 
-    // Tareas por estado (filtradas por fecha)
-    const tareasPorEstado = await this.getTareasPorEstado(inicio, fin);
+      this.logger.log(`Parsed dates: inicio=${inicio.toISOString()}, fin=${fin.toISOString()}`);
 
-    // Productos a producir (items en tareas EN_PROCESO filtradas por fecha)
-    const productosAProducir = await this.getProductosEnProceso(inicio, fin);
+      // Ventas del rango seleccionado
+      const ventasRango = await this.getVentasRango(inicio, fin);
+      
+      // Calcular comparación con período anterior (mismo número de días)
+      const diasDiferencia = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
+      const inicioAnterior = subDays(inicio, diasDiferencia);
+      const finAnterior = subDays(fin, diasDiferencia);
+      const ventasAnterior = await this.getVentasRango(inicioAnterior, finAnterior);
+      
+      const comparacionAnterior = ventasAnterior.total > 0 
+        ? ((ventasRango.total - ventasAnterior.total) / ventasAnterior.total) * 100 
+        : 0;
 
-    // Ventas por día en el rango
-    const ventasPorDia = await this.getVentasPorDiaRango(inicio, fin);
+      // Tareas por estado (filtradas por fecha)
+      const tareasPorEstado = await this.getTareasPorEstado(inicio, fin);
 
-    // Top 5 productos más vendidos en el rango
-    const topProductos = await this.getTopProductos(5, inicio, fin);
+      // Productos a producir (items en tareas EN_PROCESO filtradas por fecha)
+      const productosAProducir = await this.getProductosEnProceso(inicio, fin);
 
-    // Ventas por ruta en el rango
-    const ventasPorRuta = await this.getVentasPorRuta(inicio, fin);
+      // Ventas por día en el rango
+      const ventasPorDia = await this.getVentasPorDiaRango(inicio, fin);
 
-    // Pedidos recientes en el rango
-    const pedidosRecientes = await this.getPedidosRecientes(5, inicio, fin);
+      // Top 5 productos más vendidos en el rango
+      const topProductos = await this.getTopProductos(5, inicio, fin);
 
-    return {
-      ventasRango: {
-        total: ventasRango.total,
-        comparacionAnterior: Math.round(comparacionAnterior * 10) / 10,
-        pedidosCount: ventasRango.count,
-      },
-      periodo: {
-        inicio: format(inicio, 'yyyy-MM-dd'),
-        fin: format(fin, 'yyyy-MM-dd'),
-      },
-      tareasPorEstado,
-      productosAProducir,
-      ventasPorDia,
-      topProductos,
-      ventasPorRuta,
-      pedidosRecientes,
-    };
+      // Ventas por ruta en el rango
+      const ventasPorRuta = await this.getVentasPorRuta(inicio, fin);
+
+      // Pedidos recientes en el rango
+      const pedidosRecientes = await this.getPedidosRecientes(5, inicio, fin);
+
+      return {
+        ventasRango: {
+          total: ventasRango.total,
+          comparacionAnterior: Math.round(comparacionAnterior * 10) / 10,
+          pedidosCount: ventasRango.count,
+        },
+        periodo: {
+          inicio: format(inicio, 'yyyy-MM-dd'),
+          fin: format(fin, 'yyyy-MM-dd'),
+        },
+        tareasPorEstado,
+        productosAProducir,
+        ventasPorDia,
+        topProductos,
+        ventasPorRuta,
+        pedidosRecientes,
+      };
+    } catch (error) {
+      this.logger.error(`Error in getAdminStats: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   async getTareasOperativas() {
