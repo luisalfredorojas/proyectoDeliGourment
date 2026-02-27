@@ -83,6 +83,11 @@ const PedidoForm: React.FC = () => {
         setSoloConsignaciones(true);
       }
 
+      // Setear esProyeccion
+      if (pedido.esProyeccion) {
+        setEsProyeccion(true);
+      }
+
       // Setear observaciones
       if (pedido.observaciones) {
         setObservaciones(pedido.observaciones);
@@ -392,29 +397,18 @@ const PedidoForm: React.FC = () => {
                   {detalles.map((detalle, index) => (
                     <TableRow key={index}>
                       <TableCell>
-                        <Autocomplete
-                          freeSolo
+                        <Autocomplete<Producto>
                           options={productos}
-                          getOptionLabel={(option) => typeof option === 'string' ? option : option.nombre}
-                          value={productos.find(p => p.nombre === detalle.producto) || detalle.producto}
+                          getOptionLabel={(option) => option.nombre}
+                          value={productos.find(p => p.nombre === detalle.producto) || null}
                           onChange={(_, newValue) => {
-                            if (typeof newValue === 'string') {
-                                handleDetalleChange(index, 'producto', newValue);
-                            } else {
-                                handleProductSelect(index, newValue);
-                            }
-                          }}
-                          onInputChange={(_, newInputValue) => {
-                              // Allow free text if not selected from list
-                              if (!productos.some(p => p.nombre === newInputValue)) {
-                                  handleDetalleChange(index, 'producto', newInputValue);
-                              }
+                            handleProductSelect(index, newValue);
                           }}
                           renderInput={(params) => (
-                            <TextField 
-                                {...params} 
-                                placeholder="Buscar producto..." 
-                                required 
+                            <TextField
+                                {...params}
+                                placeholder="Seleccionar producto..."
+                                required
                                 size="small"
                             />
                           )}
@@ -493,27 +487,15 @@ const PedidoForm: React.FC = () => {
                       {consignaciones.map((cons, index) => (
                         <TableRow key={index}>
                           <TableCell>
-                            <Autocomplete<Producto, false, false, true>
+                            <Autocomplete<Producto>
                               options={productos}
-                              getOptionLabel={(option) => typeof option === 'string' ? option : option.nombre}
+                              getOptionLabel={(option) => option.nombre}
                               value={productos.find(p => p.nombre === cons.producto) || null}
                               onChange={(_, value) => {
-                                if (typeof value === 'string') {
-                                  handleConsignacionChange(index, 'producto', value);
-                                } else if (value) {
-                                  handleConsignacionProductSelect(index, value);
-                                } else {
-                                  handleConsignacionChange(index, 'producto', '');
-                                }
-                              }}
-                              freeSolo
-                              onInputChange={(_, newInputValue, reason) => {
-                                if (reason === 'input' && !productos.some(p => p.nombre === newInputValue)) {
-                                  handleConsignacionChange(index, 'producto', newInputValue);
-                                }
+                                handleConsignacionProductSelect(index, value);
                               }}
                               renderInput={(params) => (
-                                <TextField {...params} size="small" placeholder="Producto" />
+                                <TextField {...params} size="small" placeholder="Seleccionar producto..." />
                               )}
                             />
                           </TableCell>

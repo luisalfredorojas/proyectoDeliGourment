@@ -84,10 +84,16 @@ const PedidosList: React.FC = () => {
     handleMenuClose();
   };
 
+  const ESTADOS_NO_EDITABLES = ['EMBALAJE', 'LOGISTICA', 'ENTREGADO'];
+
   const handleEdit = () => {
-    if (selectedPedido) {
-      navigate(`/pedidos/editar/${selectedPedido.id}`);
+    if (!selectedPedido) { handleMenuClose(); return; }
+    if (selectedPedido.tarea && ESTADOS_NO_EDITABLES.includes(selectedPedido.tarea.estado)) {
+      toast.error(`No se puede editar: la tarea está en estado ${selectedPedido.tarea.estado.replace(/_/g, ' ')}`);
+      handleMenuClose();
+      return;
     }
+    navigate(`/pedidos/${selectedPedido.id}/edit`);
     handleMenuClose();
   };
 
@@ -377,8 +383,12 @@ const PedidosList: React.FC = () => {
           <Button onClick={handleViewModalClose}>Cerrar</Button>
           {canManage && (
             <Button variant="contained" startIcon={<EditIcon />} onClick={() => {
+              if (selectedPedido && selectedPedido.tarea && ESTADOS_NO_EDITABLES.includes(selectedPedido.tarea.estado)) {
+                toast.error(`No se puede editar: la tarea está en estado ${selectedPedido.tarea.estado.replace(/_/g, ' ')}`);
+                return;
+              }
               handleViewModalClose();
-              if (selectedPedido) navigate(`/pedidos/editar/${selectedPedido.id}`);
+              if (selectedPedido) navigate(`/pedidos/${selectedPedido.id}/edit`);
             }}>
               Editar
             </Button>

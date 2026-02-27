@@ -241,9 +241,12 @@ export class PedidosService {
   async update(id: string, updatePedidoDto: UpdatePedidoDto, userId: string, isAdmin: boolean) {
     const pedido = await this.findOne(id);
 
-    // Check if tarea is ENTREGADO
-    if (pedido.tarea && pedido.tarea.estado === 'ENTREGADO') {
-      throw new BadRequestException('No se puede modificar un pedido ya entregado');
+    // Block edit if tarea is in an advanced state
+    const ESTADOS_NO_EDITABLES = ['EMBALAJE', 'LOGISTICA', 'ENTREGADO'];
+    if (pedido.tarea && ESTADOS_NO_EDITABLES.includes(pedido.tarea.estado)) {
+      throw new BadRequestException(
+        `No se puede modificar un pedido en estado: ${pedido.tarea.estado.replace(/_/g, ' ')}`,
+      );
     }
 
     // If changing fechaProduccion, check time window and permissions

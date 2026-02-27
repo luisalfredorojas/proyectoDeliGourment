@@ -65,8 +65,8 @@ export class PedidosController {
 
   @Patch(':id')
   @UseGuards(RolesGuard)
-  @Roles('ADMIN')
-  @ApiOperation({ summary: 'Actualizar pedido (solo ADMIN)' })
+  @Roles('ASISTENTE', 'ADMIN')
+  @ApiOperation({ summary: 'Actualizar pedido (ASISTENTE o ADMIN)' })
   @ApiResponse({ status: 200, description: 'Pedido actualizado' })
   @ApiResponse({
     status: 403,
