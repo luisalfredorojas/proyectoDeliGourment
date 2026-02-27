@@ -182,6 +182,9 @@ const PedidosList: React.FC = () => {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                         {pedido.sucursal?.cliente?.razonSocial}
+                        {pedido.esProyeccion && (
+                          <Chip icon={<span>📊</span>} label="Proyección" size="small" sx={{ bgcolor: '#e0e0e0', color: '#616161' }} variant="outlined" />
+                        )}
                         {pedido.soloConsignaciones && (
                           <Chip icon={<span>🔄</span>} label="Solo Consignaciones" size="small" sx={{ bgcolor: '#fef3c7', color: '#92400e', borderColor: '#f59e0b' }} variant="outlined" />
                         )}

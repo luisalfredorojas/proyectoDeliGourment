@@ -1,10 +1,18 @@
 import { Card, CardContent, Typography, Chip, Box, Avatar } from '@mui/material';
 import { Comment as CommentIcon, AttachMoney as MoneyIcon, Route as RouteIcon, Store as StoreIcon, DragIndicator as DragIcon, CalendarToday as CalendarIcon } from '@mui/icons-material';
-import { Tarea } from '../../types/entities';
+import { Tarea, EstadoProductoEnTarea } from '../../types/entities';
 import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+const ESTADO_PRODUCTO_COLORS: Record<EstadoProductoEnTarea, string> = {
+  [EstadoProductoEnTarea.PENDIENTE]: '#9e9e9e',
+  [EstadoProductoEnTarea.EN_PROCESO]: '#2196f3',
+  [EstadoProductoEnTarea.LISTO]: '#66bb6a',
+  [EstadoProductoEnTarea.EN_LOGISTICA]: '#f57c00',
+  [EstadoProductoEnTarea.ENTREGADO]: '#2e7d32',
+};
 
 interface TareaCardProps {
   tarea: Tarea;
@@ -38,9 +46,9 @@ const TareaCard: React.FC<TareaCardProps> = ({ tarea, onClick }) => {
       sx={{ 
         mb: 2, 
         cursor: 'pointer',
-        bgcolor: tarea.pedido?.soloConsignaciones ? '#fffbea' : 'white',
-        borderLeft: tarea.pedido?.soloConsignaciones ? 4 : 0,
-        borderColor: tarea.pedido?.soloConsignaciones ? '#f59e0b' : 'transparent',
+        bgcolor: tarea.pedido?.esProyeccion ? '#f0f0f0' : tarea.pedido?.soloConsignaciones ? '#fffbea' : 'white',
+        borderLeft: tarea.pedido?.esProyeccion ? 4 : tarea.pedido?.soloConsignaciones ? 4 : 0,
+        borderColor: tarea.pedido?.esProyeccion ? '#9e9e9e' : tarea.pedido?.soloConsignaciones ? '#f59e0b' : 'transparent',
         '&:hover': { 
           boxShadow: 4,
           transform: 'translateY(-2px)',
@@ -59,6 +67,9 @@ const TareaCard: React.FC<TareaCardProps> = ({ tarea, onClick }) => {
           <Box sx={{ flex: 1 }} onClick={onClick}>
             <Typography variant="subtitle2" fontWeight="bold" gutterBottom noWrap>
               #{tarea.id.slice(-6)} - {tarea.pedido?.sucursal?.cliente?.razonSocial || 'Sin cliente'}
+              {tarea.pedido?.esProyeccion && (
+                <Chip label="📊 Proyección" size="small" sx={{ ml: 0.5, height: 18, fontSize: '0.65rem', bgcolor: '#e0e0e0' }} />
+              )}
             </Typography>
             
             <Typography variant="caption" color="text.secondary" display="block" gutterBottom noWrap>
@@ -105,6 +116,26 @@ const TareaCard: React.FC<TareaCardProps> = ({ tarea, onClick }) => {
                   <Typography key={idx} variant="caption" color="#92400e" display="block">
                     • {cons.producto}: {cons.cantidad}
                   </Typography>
+                ))}
+              </Box>
+            )}
+
+            {/* Per-product state indicator */}
+            {tarea.productosEstado && tarea.productosEstado.length > 0 && (
+              <Box sx={{ mt: 1, p: 1, bgcolor: '#f8f9fa', borderRadius: 1 }}>
+                <Typography variant="caption" fontWeight="bold" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+                  Estado productos:
+                </Typography>
+                {tarea.productosEstado.map((pe, idx) => (
+                  <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.3 }}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: ESTADO_PRODUCTO_COLORS[pe.estado], flexShrink: 0 }} />
+                    <Typography variant="caption" color="text.secondary" noWrap sx={{ flex: 1 }}>
+                      {pe.productoNombre}
+                    </Typography>
+                    <Typography variant="caption" fontWeight="bold" color="text.secondary">
+                      x{pe.cantidad}
+                    </Typography>
+                  </Box>
                 ))}
               </Box>
             )}

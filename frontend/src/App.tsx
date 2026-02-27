@@ -26,6 +26,9 @@ import SalesReports from './pages/Reportes/SalesReports';
 import DeliveryReports from './pages/Reportes/DeliveryReports';
 import ConsignmentReports from './pages/Reportes/ConsignmentReports';
 import OperationalReports from './pages/Reportes/OperationalReports';
+import InventarioReports from './pages/Reportes/InventarioReports';
+import InventarioPage from './pages/Inventario/InventarioPage';
+
 
 import { UserRole } from './types/auth';
 
@@ -73,6 +76,10 @@ function App() {
         {/* Tareas */}
         <Route path="/tareas" element={<ProtectedRoute><TareasKanban /></ProtectedRoute>} />
 
+        {/* Inventario */}
+        <Route path="/inventario" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]}><InventarioPage /></ProtectedRoute>} />
+
+
         {/* Users */}
         <Route path="/usuarios" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]}><UsersList /></ProtectedRoute>} />
         <Route path="/register" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]}><Register /></ProtectedRoute>} />
@@ -84,6 +91,7 @@ function App() {
         <Route path="/reportes/entregas" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><DeliveryReports /></ProtectedRoute>} />
         <Route path="/reportes/consignaciones" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><ConsignmentReports /></ProtectedRoute>} />
         <Route path="/reportes/operativos" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><OperationalReports /></ProtectedRoute>} />
+        <Route path="/reportes/inventario" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><InventarioReports /></ProtectedRoute>} />
 
         <Route path="/" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />

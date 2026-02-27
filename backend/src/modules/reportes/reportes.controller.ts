@@ -66,6 +66,14 @@ export class ReportesController {
     return this.reportesService.getConsignmentReport(filters);
   }
 
+  // Inventory Reports
+  @Get('inventario')
+  @Roles(UserRole.ADMIN, UserRole.ASISTENTE)
+  @ApiOperation({ summary: 'Obtener reporte de inventario' })
+  async getInventarioReport(@Query() filters: any) {
+    return this.reportesService.getInventarioReport(filters);
+  }
+
   // Operational Reports
   @Get('operativos')
   @Roles(UserRole.ADMIN, UserRole.ASISTENTE)

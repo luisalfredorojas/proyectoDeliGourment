@@ -52,13 +52,13 @@ class DetalleConsignacionDto {
 }
 
 export class CreatePedidoDto {
-  @ApiProperty({
-    description: 'ID de la sucursal que hace el pedido',
+  @ApiPropertyOptional({
+    description: 'ID de la sucursal que hace el pedido (opcional para proyecciones)',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @IsUUID('4')
-  @IsNotEmpty()
-  sucursalId: string;
+  @IsOptional()
+  sucursalId?: string;
 
   @ApiProperty({
     description: 'Detalles de los productos',
@@ -83,6 +83,14 @@ export class CreatePedidoDto {
   @IsBoolean()
   @IsOptional()
   soloConsignaciones?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Indica si el pedido es una proyección de producción',
+    example: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  esProyeccion?: boolean;
 
   @ApiPropertyOptional({
     description: 'Observaciones adicionales',

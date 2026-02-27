@@ -4,12 +4,16 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { TareaEstado } from '@prisma/client';
-import { CambiarEstadoDto, AsignarTareaDto, AddComentarioDto, TipoComentario } from './dto/tarea.dto';
+import { InventarioService } from '../inventario/inventario.service';
+import { TareaEstado, EstadoProductoEnTarea } from '@prisma/client';
+import { CambiarEstadoDto, AsignarTareaDto, AddComentarioDto, CambiarEstadoProductoDto, TipoComentario } from './dto/tarea.dto';
 
 @Injectable()
 export class TareasService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private inventarioService: InventarioService,
+  ) {}
 
   async findAll(filters?: {
     estado?: TareaEstado;
@@ -78,6 +82,9 @@ export class TareasService {
             nombre: true,
             email: true,
           },
+        },
+        productosEstado: {
+          orderBy: { productoNombre: 'asc' },
         },
         _count: {
           select: {
@@ -150,6 +157,9 @@ export class TareasService {
             fecha: 'desc',
           },
           take: 5, // Last 5 for quick view
+        },
+        productosEstado: {
+          orderBy: { productoNombre: 'asc' },
         },
       },
     });
@@ -228,6 +238,90 @@ export class TareasService {
         comentario: cambiarEstadoDto.comentario,
       },
     });
+
+    // Handle product inventory on state transitions
+    const esProyeccion = tarea.pedido?.esProyeccion || false;
+    const productosEstado = tarea.productosEstado || [];
+
+    // LOGISTICA: deduct raw materials (production step) — applies to all orders
+    if (
+      cambiarEstadoDto.nuevoEstado === TareaEstado.LOGISTICA &&
+      tarea.estado !== TareaEstado.LOGISTICA
+    ) {
+      for (const pe of productosEstado) {
+        try {
+          await this.inventarioService.deducirMateriaPrimaPorProducto(
+            pe.productoNombre,
+            pe.cantidad,
+            id,
+            userId,
+          );
+        } catch (error) {
+          console.warn(`⚠️ Raw material deduction failed for ${pe.productoNombre}: ${error.message}`);
+        }
+      }
+    }
+
+    // ENTREGADO: handle product stock
+    if (cambiarEstadoDto.nuevoEstado === TareaEstado.ENTREGADO) {
+      for (const pe of productosEstado) {
+        try {
+          if (esProyeccion) {
+            // Projection orders: ADD product stock (production completed for inventory)
+            await this.inventarioService.sumarProductoAlInventario(
+              pe.productoNombre,
+              pe.cantidad,
+              id,
+              userId,
+            );
+          } else {
+            // Normal orders: DEDUCT product stock (products leave warehouse)
+            await this.inventarioService.deducirProductoDelInventario(
+              pe.productoNombre,
+              pe.cantidad,
+              id,
+              userId,
+            );
+          }
+        } catch (error) {
+          console.warn(`⚠️ Product stock update failed for ${pe.productoNombre}: ${error.message}`);
+        }
+      }
+
+      // ENTREGADO (non-projection): process consignaciones
+      // - Deduct replenishment products going out to client (SALIDA)
+      // - Register returned products as MERMA (informational, does not affect sellable stock)
+      if (!esProyeccion) {
+        const consignaciones = (tarea.pedido as any)?.consignaciones;
+        if (Array.isArray(consignaciones) && consignaciones.length > 0) {
+          for (const consig of consignaciones) {
+            try {
+              // Deduct from inventory: new products going out to client
+              await this.inventarioService.deducirProductoPorConsignacion(
+                consig.producto,
+                consig.cantidad,
+                id,
+                userId,
+              );
+            } catch (error) {
+              console.warn(`⚠️ Consignación deduction failed for ${consig.producto}: ${error.message}`);
+            }
+
+            try {
+              // Register MERMA: returned products from client (not sellable, for internal use)
+              await this.inventarioService.registrarMermaConsignacion(
+                consig.producto,
+                consig.cantidad,
+                id,
+                userId,
+              );
+            } catch (error) {
+              console.warn(`⚠️ MERMA registration failed for ${consig.producto}: ${error.message}`);
+            }
+          }
+        }
+      }
+    }
 
     return tareaActualizada;
   }
@@ -409,5 +503,169 @@ export class TareasService {
         asignadoA: true,
       },
     });
+  }
+
+  // ========== Per-product state management ==========
+
+  /**
+   * Auto-create TareaProductoEstado entries for a tarea based on its pedido detalles.
+   * Called after the tarea is created.
+   */
+  async createProductosEstado(tareaId: string) {
+    const tarea = await this.prisma.tarea.findUnique({
+      where: { id: tareaId },
+      include: {
+        pedido: {
+          select: { detalles: true },
+        },
+      },
+    });
+
+    if (!tarea || !tarea.pedido) return;
+
+    const detalles = tarea.pedido.detalles as any[];
+    if (!detalles || !Array.isArray(detalles) || detalles.length === 0) return;
+
+    // Look up product IDs by name
+    const productNames = detalles.map((d: any) => d.producto).filter(Boolean);
+    const productos = await this.prisma.producto.findMany({
+      where: { nombre: { in: productNames } },
+      select: { id: true, nombre: true },
+    });
+    const productoMap = new Map(productos.map((p) => [p.nombre, p.id]));
+
+    // Create one TareaProductoEstado per product in the order
+    const data = detalles.map((detalle: any) => ({
+      tareaId,
+      productoNombre: detalle.producto || 'Sin nombre',
+      productoId: productoMap.get(detalle.producto) || null,
+      cantidad: detalle.cantidad || 0,
+      estado: EstadoProductoEnTarea.PENDIENTE,
+    }));
+
+    await this.prisma.tareaProductoEstado.createMany({
+      data,
+      skipDuplicates: true,
+    });
+  }
+
+  /**
+   * Change the state of an individual product within a task.
+   * Triggers automatic stock management:
+   * - Normal orders: deduct product stock when moving to EN_LOGISTICA
+   * - Projection orders: add product stock when moving to ENTREGADO
+   */
+  async cambiarEstadoProducto(
+    tareaId: string,
+    dto: CambiarEstadoProductoDto,
+    userId?: string,
+  ) {
+    // Verify tarea exists and get pedido info
+    const tarea = await this.findOne(tareaId);
+
+    const productoEstado = await this.prisma.tareaProductoEstado.findUnique({
+      where: {
+        tareaId_productoNombre: {
+          tareaId,
+          productoNombre: dto.productoNombre,
+        },
+      },
+    });
+
+    if (!productoEstado) {
+      throw new NotFoundException(
+        `Producto "${dto.productoNombre}" no encontrado en esta tarea`,
+      );
+    }
+
+    const estadoAnterior = productoEstado.estado;
+
+    const updated = await this.prisma.tareaProductoEstado.update({
+      where: { id: productoEstado.id },
+      data: { estado: dto.nuevoEstado },
+    });
+
+    const esProyeccion = tarea.pedido?.esProyeccion || false;
+
+    // EN_LOGISTICA: deduct raw materials (production step) — applies to all orders
+    if (
+      dto.nuevoEstado === EstadoProductoEnTarea.EN_LOGISTICA &&
+      estadoAnterior !== EstadoProductoEnTarea.EN_LOGISTICA &&
+      estadoAnterior !== EstadoProductoEnTarea.ENTREGADO
+    ) {
+      try {
+        await this.inventarioService.deducirMateriaPrimaPorProducto(
+          dto.productoNombre,
+          productoEstado.cantidad,
+          tareaId,
+          userId || 'system',
+        );
+      } catch (error) {
+        console.warn(
+          `⚠️ Raw material deduction failed for ${dto.productoNombre}: ${error.message}`,
+        );
+      }
+    }
+
+    // ENTREGADO: handle product stock
+    if (
+      dto.nuevoEstado === EstadoProductoEnTarea.ENTREGADO &&
+      estadoAnterior !== EstadoProductoEnTarea.ENTREGADO
+    ) {
+      try {
+        if (esProyeccion) {
+          // Projection orders: ADD product stock
+          await this.inventarioService.sumarProductoAlInventario(
+            dto.productoNombre,
+            productoEstado.cantidad,
+            tareaId,
+            userId || 'system',
+          );
+        } else {
+          // Normal orders: DEDUCT product stock
+          await this.inventarioService.deducirProductoDelInventario(
+            dto.productoNombre,
+            productoEstado.cantidad,
+            tareaId,
+            userId || 'system',
+          );
+        }
+      } catch (error) {
+        console.warn(
+          `⚠️ Product stock update failed for ${dto.productoNombre}: ${error.message}`,
+        );
+      }
+    }
+
+    return updated;
+  }
+
+  /**
+   * Get all product states for a task.
+   */
+  async getProductosEstado(tareaId: string) {
+    await this.findOne(tareaId); // Verify tarea exists
+
+    return this.prisma.tareaProductoEstado.findMany({
+      where: { tareaId },
+      orderBy: { productoNombre: 'asc' },
+    });
+  }
+
+  /**
+   * Bulk change state of all products in a task.
+   */
+  async cambiarEstadoTodosProductos(
+    tareaId: string,
+    nuevoEstado: EstadoProductoEnTarea,
+  ) {
+    await this.findOne(tareaId); // Verify tarea exists
+
+    await this.prisma.tareaProductoEstado.updateMany({
+      where: { tareaId },
+      data: { estado: nuevoEstado },
+    });
+
+    return this.getProductosEstado(tareaId);
   }
 }

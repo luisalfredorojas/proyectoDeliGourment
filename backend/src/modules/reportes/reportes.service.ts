@@ -342,6 +342,80 @@ export class ReportesService {
     };
   }
 
+  // ==================== INVENTORY REPORTS ====================
+
+  async getInventarioReport(filters: any) {
+    const { fechaInicio, fechaFin } = filters;
+
+    const pedidoWhere: any = {};
+    if (fechaInicio || fechaFin) {
+      pedidoWhere.fechaProduccion = {};
+      if (fechaInicio) pedidoWhere.fechaProduccion.gte = new Date(fechaInicio);
+      if (fechaFin) pedidoWhere.fechaProduccion.lte = new Date(fechaFin);
+    }
+
+    const tareas = await this.prisma.tarea.findMany({
+      where: {
+        estado: 'ENTREGADO',
+        pedido: pedidoWhere,
+      },
+      include: { pedido: true },
+    });
+
+    const entregadosMap = new Map<string, number>();
+    const consignacionesMap = new Map<string, number>();
+    const proyectadosMap = new Map<string, number>();
+
+    tareas.forEach((tarea) => {
+      const pedido = tarea.pedido;
+      if (!pedido) return;
+
+      if (pedido.esProyeccion) {
+        const detalles = pedido.detalles as any[];
+        if (Array.isArray(detalles)) {
+          detalles.forEach((d) => {
+            proyectadosMap.set(d.producto, (proyectadosMap.get(d.producto) || 0) + (d.cantidad || 0));
+          });
+        }
+      } else {
+        const detalles = pedido.detalles as any[];
+        if (Array.isArray(detalles)) {
+          detalles.forEach((d) => {
+            entregadosMap.set(d.producto, (entregadosMap.get(d.producto) || 0) + (d.cantidad || 0));
+          });
+        }
+        const consignaciones = pedido.consignaciones as any;
+        if (Array.isArray(consignaciones)) {
+          consignaciones.forEach((c: any) => {
+            consignacionesMap.set(c.producto, (consignacionesMap.get(c.producto) || 0) + (c.cantidad || 0));
+          });
+        }
+      }
+    });
+
+    const toArray = (map: Map<string, number>) =>
+      Array.from(map.entries())
+        .map(([nombre, cantidad]) => ({ nombre, cantidad }))
+        .sort((a, b) => b.cantidad - a.cantidad);
+
+    const entregados = toArray(entregadosMap);
+    const consignaciones = toArray(consignacionesMap);
+    const proyectados = toArray(proyectadosMap);
+
+    return {
+      totalEntregados: entregados.reduce((s, p) => s + p.cantidad, 0),
+      totalConsignaciones: consignaciones.reduce((s, p) => s + p.cantidad, 0),
+      totalProyectados: proyectados.reduce((s, p) => s + p.cantidad, 0),
+      entregados,
+      consignaciones,
+      proyectados,
+      periodo: {
+        inicio: fechaInicio || 'N/A',
+        fin: fechaFin || 'N/A',
+      },
+    };
+  }
+
   // ==================== OPERATIONAL REPORTS ====================
 
   async getOperationalReport(filters: any) {

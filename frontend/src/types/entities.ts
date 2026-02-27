@@ -121,6 +121,7 @@ export interface Pedido {
   observaciones?: string;
   fueraDeHorario: boolean;
   soloConsignaciones?: boolean;
+  esProyeccion?: boolean;
   creadoPorId: string;
   createdAt: string;
   updatedAt: string;
@@ -152,6 +153,7 @@ export interface CreatePedidoData {
   detalles: DetalleProducto[];
   consignaciones?: { producto: string; cantidad: number; precioUnitario: number }[];
   soloConsignaciones?: boolean;
+  esProyeccion?: boolean;
   observaciones?: string;
 }
 
@@ -173,10 +175,28 @@ export enum TareaEstado {
   CANCELADO = 'CANCELADO',
 }
 
+export enum EstadoProductoEnTarea {
+  PENDIENTE = 'PENDIENTE',
+  EN_PROCESO = 'EN_PROCESO',
+  LISTO = 'LISTO',
+  EN_LOGISTICA = 'EN_LOGISTICA',
+  ENTREGADO = 'ENTREGADO',
+}
+
 export enum TipoComentario {
   GENERAL = 'GENERAL',
   ESPERA = 'ESPERA',
   PROBLEMA = 'PROBLEMA',
+}
+
+export interface TareaProductoEstado {
+  id: string;
+  tareaId: string;
+  productoNombre: string;
+  productoId?: string;
+  cantidad: number;
+  estado: EstadoProductoEnTarea;
+  updatedAt: string;
 }
 
 export interface Tarea {
@@ -184,6 +204,7 @@ export interface Tarea {
   pedidoId: string;
   estado: TareaEstado;
   asignadoAId?: string;
+  proyeccionId?: string;
   fechaCreacion: string;
   fechaActualizacion: string;
   pedido?: Pedido;
@@ -194,6 +215,7 @@ export interface Tarea {
   };
   comentarios?: ComentarioTarea[];
   historialEstados?: HistorialEstado[];
+  productosEstado?: TareaProductoEstado[];
   _count?: {
     comentarios: number;
   };
@@ -238,6 +260,11 @@ export interface AsignarTareaData {
 export interface AddComentarioData {
   comentario: string;
   tipo?: TipoComentario;
+}
+
+export interface CambiarEstadoProductoData {
+  productoNombre: string;
+  nuevoEstado: EstadoProductoEnTarea;
 }
 
 export interface TimelineEvent {

@@ -45,10 +45,12 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relaciones
-  pedidosCreados     Pedido[]           @relation("PedidoCreador")
-  tareasAsignadas    Tarea[]            @relation("TareaAsignado")
-  comentarios        ComentarioTarea[]
-  historialEstados   HistorialEstado[]
+  pedidosCreados        Pedido[]              @relation("PedidoCreador")
+  tareasAsignadas       Tarea[]               @relation("TareaAsignado")
+  comentarios           ComentarioTarea[]
+  historialEstados      HistorialEstado[]
+  movimientosInventario MovimientoInventario[]
+  proyecciones          Proyeccion[]
 
   @@map("users")
 }
@@ -112,7 +114,7 @@ model Sucursal {
 // Modelo de Pedido
 model Pedido {
   id                 String   @id @default(uuid())
-  sucursalId         String
+  sucursalId         String?
   fechaRecepcion     DateTime @default(now()) // Cuando se creó el pedido
   fechaProduccion    DateTime // Día para el cual se va a producir (puede ser hoy o mañana)
   detalles           Json     // [{producto: string, cantidad: number, precioUnitario: number}]
@@ -121,14 +123,16 @@ model Pedido {
   observaciones      String?  @db.Text
   fueraDeHorario     Boolean  @default(false) // True si se creó después de 11:30 AM
   soloConsignaciones Boolean  @default(false) // True si el pedido solo contiene consignaciones (sin producción)
+  esProyeccion       Boolean  @default(false) // True si es un pedido de proyección (suma al inventario al entregar)
   creadoPorId        String
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
   // Relaciones
-  sucursal  Sucursal @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  sucursal  Sucursal? @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
   creadoPor User     @relation("PedidoCreador", fields: [creadoPorId], references: [id])
   tarea     Tarea?
+  cuadresProyeccion CuadreProyeccion[]
 
   @@map("pedidos")
 }
@@ -139,6 +143,7 @@ model Tarea {
   pedidoId        String       @unique
   estado          TareaEstado  @default(ABIERTO)
   asignadoAId     String?
+  proyeccionId    String?      @unique // Tarea generada por proyección
   fechaCreacion   DateTime     @default(now())
   fechaActualizacion DateTime  @updatedAt
 
@@ -148,6 +153,8 @@ model Tarea {
   comentarios      ComentarioTarea[]
   consignaciones   Consignacion[]
   historialEstados HistorialEstado[]
+  productosEstado  TareaProductoEstado[]
+  proyeccion       Proyeccion?          @relation(fields: [proyeccionId], references: [id])
 
   @@map("tareas")
 }
@@ -207,26 +214,71 @@ model MateriaPrima {
   nombre             String   @unique
   cantidadDisponible Float    @default(0)
   unidadMedida       String   // e.g., "kg", "litros", "unidades"
+  stockMinimo        Float    @default(0)  // Umbral para alerta de stock bajo
+  costoUnitario      Decimal? @db.Decimal(10, 2) // Costo por unidad (opcional)
+  proveedor          String?  // Proveedor principal (opcional)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
   // Relaciones
-  productos ProductoMateriaPrima[]
+  productos    ProductoMateriaPrima[]
+  movimientos  MovimientoInventario[]
 
   @@map("materias_primas")
+}
+
+// Enums para movimientos de inventario
+enum TipoMovimiento {
+  ENTRADA
+  SALIDA
+  AJUSTE
+}
+
+enum MotivoMovimiento {
+  COMPRA
+  PRODUCCION
+  MERMA
+  AJUSTE_MANUAL
+  DEVOLUCION
+}
+
+// Modelo de Movimiento de Inventario (trazabilidad de stock)
+model MovimientoInventario {
+  id              String           @id @default(uuid())
+  materiaPrimaId  String?
+  productoId      String?
+  tipo            TipoMovimiento
+  motivo          MotivoMovimiento
+  cantidad        Float            // positivo = entrada, negativo = salida
+  stockResultante Float            // stock después del movimiento
+  referencia      String?          // "Pedido #abc", "Proveedor X"
+  observaciones   String?
+  usuarioId       String
+  fecha           DateTime         @default(now())
+  createdAt       DateTime         @default(now())
+
+  // Relaciones
+  materiaPrima MateriaPrima? @relation(fields: [materiaPrimaId], references: [id], onDelete: Cascade)
+  producto     Producto?    @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  usuario      User         @relation(fields: [usuarioId], references: [id])
+
+  @@map("movimientos_inventario")
 }
 
 // Modelo de Producto
 model Producto {
   id          String   @id @default(uuid())
   nombre      String   @unique
-  precio      Decimal  @db.Decimal(10, 2)
-  descripcion String?
+  precio          Decimal  @db.Decimal(10, 2)
+  descripcion     String?
+  stockDisponible Float    @default(0) // Stock actual del producto terminado
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relaciones
-  materiasPrimas ProductoMateriaPrima[]
+  materiasPrimas         ProductoMateriaPrima[]
+  tareasEstado           TareaProductoEstado[]
+  movimientosInventario  MovimientoInventario[]
 
   @@map("productos")
 }
@@ -244,4 +296,81 @@ model ProductoMateriaPrima {
 
   @@unique([productoId, materiaPrimaId])
   @@map("productos_materias_primas")
+}
+
+// Estado individual de cada producto dentro de una tarea
+enum EstadoProductoEnTarea {
+  PENDIENTE
+  EN_PROCESO
+  LISTO
+  EN_LOGISTICA
+  ENTREGADO
+}
+
+// Modelo para rastrear el estado de cada producto dentro de una tarea
+model TareaProductoEstado {
+  id             String               @id @default(uuid())
+  tareaId        String
+  productoNombre String               // Nombre del producto (match con detalles JSON del pedido)
+  productoId     String?              // Referencia opcional al modelo Producto
+  cantidad       Int                  // Cantidad total de este producto en la tarea
+  estado         EstadoProductoEnTarea @default(PENDIENTE)
+  updatedAt      DateTime             @updatedAt
+
+  // Relaciones
+  tarea    Tarea     @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  producto Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
+
+  @@unique([tareaId, productoNombre])
+  @@map("tarea_producto_estados")
+}
+
+// Enums para proyecciones
+enum OrigenProyeccion {
+  MANUAL
+  AUTOMATICA
+}
+
+enum EstadoProyeccion {
+  BORRADOR
+  PENDIENTE
+  EN_PRODUCCION
+  CUADRADA
+  CANCELADA
+}
+
+// Modelo de Proyección de Producción
+model Proyeccion {
+  id              String            @id @default(uuid())
+  fechaProduccion DateTime
+  detalles        Json              // [{producto, cantidad, precioUnitario}]
+  origen          OrigenProyeccion
+  estado          EstadoProyeccion  @default(BORRADOR)
+  observaciones   String?
+  creadoPorId     String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relaciones
+  creadoPor       User              @relation(fields: [creadoPorId], references: [id])
+  tarea           Tarea?
+  cuadres         CuadreProyeccion[]
+
+  @@map("proyecciones")
+}
+
+// Modelo de Cuadre (reconciliación proyección vs pedidos reales)
+model CuadreProyeccion {
+  id            String     @id @default(uuid())
+  proyeccionId  String
+  pedidoId      String
+  observaciones String?
+  fecha         DateTime   @default(now())
+
+  // Relaciones
+  proyeccion    Proyeccion @relation(fields: [proyeccionId], references: [id], onDelete: Cascade)
+  pedido        Pedido     @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@unique([proyeccionId, pedidoId])
+  @@map("cuadres_proyeccion")
 }

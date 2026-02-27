@@ -80,21 +80,9 @@ const TareasKanban: React.FC = () => {
         return d;
       };
       
-      // Get start of work week (Monday), considering Friday 11:30am rule
+      // Get start of current week (Monday to Sunday)
       const getWorkWeekStart = (): Date => {
-        const now = new Date();
-        const dayOfWeek = now.getDay(); // 0=Sunday, 5=Friday
-        const hours = now.getHours();
-        const minutes = now.getMinutes();
-        
-        // If Friday after 11:30am, "current week" becomes next week
-        if (dayOfWeek === 5 && (hours > 11 || (hours === 11 && minutes >= 30))) {
-          const nextMonday = getMonday(now);
-          nextMonday.setDate(nextMonday.getDate() + 7);
-          return nextMonday;
-        }
-        
-        return getMonday(now);
+        return getMonday(new Date());
       };
       
       // Filter tasks: only show tasks from current work week
@@ -109,12 +97,14 @@ const TareasKanban: React.FC = () => {
         return fechaProduccion >= mondayOfWeek && fechaProduccion < nextMonday;
       });
       
-      // Generate week label
-      const day = mondayOfWeek.getDate();
-      const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 
+      // Generate week label (Monday to Sunday)
+      const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
                       'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-      const month = months[mondayOfWeek.getMonth()];
-      setWeekLabel(`Semana del ${day} de ${month}`);
+      const sunday = new Date(nextMonday);
+      sunday.setDate(sunday.getDate() - 1);
+      const startLabel = `${mondayOfWeek.getDate()} ${months[mondayOfWeek.getMonth()]}`;
+      const endLabel = `${sunday.getDate()} ${months[sunday.getMonth()]}`;
+      setWeekLabel(`Semana del ${startLabel} al ${endLabel}`);
       
       setTareas(filteredTareas);
       setRutas(rutasData);
@@ -131,49 +121,51 @@ const TareasKanban: React.FC = () => {
 
   const getProductionSummary = () => {
     const tareasEnProceso = tareas.filter(t => t.estado === TareaEstado.EN_PROCESO);
-    
-    // Group products by name and sum quantities
-    const productMap = new Map<string, number>();
+
+    const clientMap = new Map<string, number>();
     const consignmentMap = new Map<string, number>();
-    
+    const projectionMap = new Map<string, number>();
+
     tareasEnProceso.forEach(tarea => {
-      // Sum production products
-      tarea.pedido?.detalles?.forEach(detalle => {
-        const productName = detalle.producto || 'Sin nombre';
-        const currentQty = productMap.get(productName) || 0;
-        productMap.set(productName, currentQty + (detalle.cantidad || 0));
-      });
-      
-      // Sum consignment products
-      if (tarea.pedido?.consignaciones) {
-        try {
-          const consignaciones = Array.isArray(tarea.pedido.consignaciones) 
-            ? tarea.pedido.consignaciones 
-            : JSON.parse(tarea.pedido.consignaciones as any);
-          
-          consignaciones.forEach((consig: any) => {
-            const productName = consig.producto || 'Sin nombre';
-            const currentQty = consignmentMap.get(productName) || 0;
-            consignmentMap.set(productName, currentQty + (consig.cantidad || 0));
-          });
-        } catch (error) {
-          console.error('Error parsing consignaciones:', error);
+      if (tarea.pedido?.esProyeccion) {
+        // Proyección: sumar detalles en grupo "Producir"
+        tarea.pedido?.detalles?.forEach(detalle => {
+          const name = detalle.producto || 'Sin nombre';
+          projectionMap.set(name, (projectionMap.get(name) || 0) + (detalle.cantidad || 0));
+        });
+      } else {
+        // Pedido de cliente: sumar detalles en grupo "Entregar"
+        tarea.pedido?.detalles?.forEach(detalle => {
+          const name = detalle.producto || 'Sin nombre';
+          clientMap.set(name, (clientMap.get(name) || 0) + (detalle.cantidad || 0));
+        });
+
+        // Consignaciones del pedido
+        if (tarea.pedido?.consignaciones) {
+          try {
+            const consignaciones = Array.isArray(tarea.pedido.consignaciones)
+              ? tarea.pedido.consignaciones
+              : JSON.parse(tarea.pedido.consignaciones as any);
+            consignaciones.forEach((consig: any) => {
+              const name = consig.producto || 'Sin nombre';
+              consignmentMap.set(name, (consignmentMap.get(name) || 0) + (consig.cantidad || 0));
+            });
+          } catch (error) {
+            console.error('Error parsing consignaciones:', error);
+          }
         }
       }
     });
-    
-    // Convert to array and sort by quantity descending
-    const products = Array.from(productMap.entries())
-      .map(([nombre, cantidad]) => ({ nombre, cantidad }))
-      .sort((a, b) => b.cantidad - a.cantidad);
-    
-    const consignments = Array.from(consignmentMap.entries())
-      .map(([nombre, cantidad]) => ({ nombre, cantidad }))
-      .sort((a, b) => b.cantidad - a.cantidad);
-    
+
+    const toArray = (map: Map<string, number>) =>
+      Array.from(map.entries())
+        .map(([nombre, cantidad]) => ({ nombre, cantidad }))
+        .sort((a, b) => b.cantidad - a.cantidad);
+
     return {
-      products,
-      consignments,
+      clientProducts: toArray(clientMap),
+      consignments: toArray(consignmentMap),
+      projectionProducts: toArray(projectionMap),
       totalTareas: tareasEnProceso.length,
     };
   };
@@ -278,70 +270,75 @@ const TareasKanban: React.FC = () => {
       {/* Production Summary */}
       {(() => {
         const summary = getProductionSummary();
-        return (summary.products.length > 0 || summary.consignments.length > 0) ? (
-          <Box sx={{ mb: 3 }}>
-            <Paper elevation={2} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                Resumen de Producción - {summary.totalTareas} {summary.totalTareas === 1 ? 'tarea' : 'tareas'} en proceso
+        const hasAny = summary.clientProducts.length > 0 || summary.consignments.length > 0 || summary.projectionProducts.length > 0;
+        if (!hasAny) return null;
+
+        const ProductCard = ({ nombre, cantidad, bg, border }: { nombre: string; cantidad: number; bg: string; border?: string }) => (
+          <Paper
+            elevation={3}
+            sx={{
+              width: 160,
+              p: 2,
+              background: bg,
+              color: 'white',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 2,
+              ...(border && { border }),
+            }}
+          >
+            <Typography variant="h3" fontWeight="bold" sx={{ mb: 0.5 }}>
+              {cantidad}
+            </Typography>
+            <Typography variant="body2" align="center" sx={{ opacity: 0.9, lineHeight: 1.2 }}>
+              {nombre}
+            </Typography>
+          </Paper>
+        );
+
+        const SummaryRow = ({ title, items, bg, border }: { title: string; items: { nombre: string; cantidad: number }[]; bg: string; border?: string }) => {
+          if (items.length === 0) return null;
+          return (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1 }}>
+                {title}
               </Typography>
-              <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 1 }}>
-                {summary.products.map((product, index) => (
-                  <Paper
-                    key={index}
-                    elevation={3}
-                    sx={{
-                      minWidth: 200,
-                      p: 2.5,
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: 'white',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 2,
-                    }}
-                  >
-                    <Typography variant="h3" fontWeight="bold" sx={{ mb: 0.5 }}>
-                      {product.cantidad}
-                    </Typography>
-                    <Typography variant="body2" align="center" sx={{ opacity: 0.9 }}>
-                      {product.nombre}
-                    </Typography>
-                  </Paper>
-                ))}
-                {/* Consignment Products */}
-                {summary.consignments && summary.consignments.length > 0 && summary.consignments.map((consignment, index) => (
-                  <Paper
-                    key={`consig-${index}`}
-                    elevation={3}
-                    sx={{
-                      minWidth: 200,
-                      p: 2.5,
-                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                      color: 'white',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 2,
-                      border: '2px solid #fbbf24',
-                    }}
-                  >
-                    <Typography variant="h3" fontWeight="bold" sx={{ mb: 0.5 }}>
-                      {consignment.cantidad}
-                    </Typography>
-                    <Typography variant="body2" align="center" sx={{ opacity: 0.9 }}>
-                      {consignment.nombre}
-                    </Typography>
-                    <Typography variant="caption" sx={{ mt: 0.5, opacity: 0.8, fontWeight: 'bold' }}>
-                      🔄 CONSIGNACIÓN
-                    </Typography>
-                  </Paper>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                {items.map((item, i) => (
+                  <ProductCard key={i} nombre={item.nombre} cantidad={item.cantidad} bg={bg} border={border} />
                 ))}
               </Box>
+            </Box>
+          );
+        };
+
+        return (
+          <Box sx={{ mb: 3 }}>
+            <Paper elevation={2} sx={{ p: 2.5, bgcolor: '#f5f5f5' }}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom>
+                Resumen de Producción · {summary.totalTareas} {summary.totalTareas === 1 ? 'tarea' : 'tareas'} en proceso
+              </Typography>
+              <SummaryRow
+                title="Entregar"
+                items={summary.clientProducts}
+                bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+              />
+              <SummaryRow
+                title="Consignación"
+                items={summary.consignments}
+                bg="linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
+                border="2px solid #fbbf24"
+              />
+              <SummaryRow
+                title="Producir"
+                items={summary.projectionProducts}
+                bg="linear-gradient(135deg, #757575 0%, #424242 100%)"
+              />
             </Paper>
           </Box>
-        ) : null;
+        );
       })()}
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>

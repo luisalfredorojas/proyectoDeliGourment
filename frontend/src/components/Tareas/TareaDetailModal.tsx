@@ -6,7 +6,7 @@ import {
 import { Close as CloseIcon, History as HistoryIcon, Send as SendIcon, AttachMoney as MoneyIcon, Cancel as CancelIcon } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { tareasService } from '../../services/tareasService';
-import { Tarea, TareaEstado, TipoComentario } from '../../types/entities';
+import { Tarea, TareaEstado, TipoComentario, EstadoProductoEnTarea, TareaProductoEstado } from '../../types/entities';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '../../hooks/useAuth';
@@ -40,6 +40,22 @@ const TareaDetailModal: React.FC<TareaDetailModalProps> = ({ open, tarea: initia
   const canCancel = (user?.rol === UserRole.ADMIN || user?.rol === UserRole.ASISTENTE)
     && tarea.estado !== TareaEstado.CANCELADO
     && tarea.estado !== TareaEstado.ENTREGADO;
+
+  const ESTADO_PRODUCTO_LABELS: Record<EstadoProductoEnTarea, string> = {
+    [EstadoProductoEnTarea.PENDIENTE]: 'Pendiente',
+    [EstadoProductoEnTarea.EN_PROCESO]: 'En Proceso',
+    [EstadoProductoEnTarea.LISTO]: 'Listo',
+    [EstadoProductoEnTarea.EN_LOGISTICA]: 'En Logística',
+    [EstadoProductoEnTarea.ENTREGADO]: 'Entregado',
+  };
+
+  const ESTADO_PRODUCTO_COLORS: Record<EstadoProductoEnTarea, string> = {
+    [EstadoProductoEnTarea.PENDIENTE]: '#9e9e9e',
+    [EstadoProductoEnTarea.EN_PROCESO]: '#2196f3',
+    [EstadoProductoEnTarea.LISTO]: '#66bb6a',
+    [EstadoProductoEnTarea.EN_LOGISTICA]: '#f57c00',
+    [EstadoProductoEnTarea.ENTREGADO]: '#2e7d32',
+  };
 
   useEffect(() => {
     if (open) {
@@ -104,6 +120,26 @@ const TareaDetailModal: React.FC<TareaDetailModalProps> = ({ open, tarea: initia
       toast.error(error.response?.data?.message || 'Error al cambiar estado');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEstadoProductoChange = async (productoNombre: string, nuevoEstado: EstadoProductoEnTarea) => {
+    try {
+      await tareasService.cambiarEstadoProducto(tarea.id, { productoNombre, nuevoEstado });
+      toast.success(`${productoNombre}: ${ESTADO_PRODUCTO_LABELS[nuevoEstado]}`);
+      await loadTareaFull();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error al cambiar estado del producto');
+    }
+  };
+
+  const handleCambiarTodosProductos = async (nuevoEstado: EstadoProductoEnTarea) => {
+    try {
+      await tareasService.cambiarEstadoTodosProductos(tarea.id, nuevoEstado);
+      toast.success(`Todos los productos: ${ESTADO_PRODUCTO_LABELS[nuevoEstado]}`);
+      await loadTareaFull();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error al cambiar estado de productos');
     }
   };
 
@@ -227,13 +263,89 @@ const TareaDetailModal: React.FC<TareaDetailModalProps> = ({ open, tarea: initia
             </Paper>
           </Grid>
 
-          {/* Productos del Pedido */}
+          {/* Productos del Pedido - con estado individual */}
           <Grid item xs={12}>
             <Paper variant="outlined" sx={{ p: 2 }}>
-              <Typography variant="subtitle2" gutterBottom fontWeight="bold">
-                📦 Productos a Producir
-              </Typography>
-              {tarea.pedido?.detalles && tarea.pedido.detalles.length > 0 ? (
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle2" fontWeight="bold">
+                  📦 Productos a Producir
+                </Typography>
+                {tarea.productosEstado && tarea.productosEstado.length > 0 && tarea.estado !== TareaEstado.ENTREGADO && (
+                  <FormControl size="small" sx={{ minWidth: 140 }}>
+                    <InputLabel sx={{ fontSize: '0.75rem' }}>Cambiar todos</InputLabel>
+                    <Select
+                      label="Cambiar todos"
+                      value=""
+                      onChange={(e) => handleCambiarTodosProductos(e.target.value as EstadoProductoEnTarea)}
+                      sx={{ fontSize: '0.75rem' }}
+                    >
+                      {Object.values(EstadoProductoEnTarea).map((estado) => (
+                        <MenuItem key={estado} value={estado} sx={{ fontSize: '0.8rem' }}>
+                          {ESTADO_PRODUCTO_LABELS[estado]}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </Box>
+              {tarea.productosEstado && tarea.productosEstado.length > 0 ? (
+                <Box>
+                  {tarea.productosEstado.map((pe: TareaProductoEstado) => (
+                    <Box
+                      key={pe.id}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        py: 1,
+                        px: 1,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        '&:last-child': { borderBottom: 'none' },
+                        borderRadius: 1,
+                        '&:hover': { bgcolor: 'grey.50' },
+                      }}
+                    >
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" fontWeight="medium">
+                          {pe.productoNombre}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Cantidad: {pe.cantidad}
+                        </Typography>
+                      </Box>
+                      {tarea.estado !== TareaEstado.ENTREGADO ? (
+                        <FormControl size="small" sx={{ minWidth: 130 }}>
+                          <Select
+                            value={pe.estado}
+                            onChange={(e) => handleEstadoProductoChange(pe.productoNombre, e.target.value as EstadoProductoEnTarea)}
+                            sx={{
+                              fontSize: '0.75rem',
+                              bgcolor: ESTADO_PRODUCTO_COLORS[pe.estado] + '20',
+                              '& .MuiSelect-select': { py: 0.5 },
+                            }}
+                          >
+                            {Object.values(EstadoProductoEnTarea).map((estado) => (
+                              <MenuItem key={estado} value={estado} sx={{ fontSize: '0.8rem' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: ESTADO_PRODUCTO_COLORS[estado] }} />
+                                  {ESTADO_PRODUCTO_LABELS[estado]}
+                                </Box>
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      ) : (
+                        <Chip
+                          label={ESTADO_PRODUCTO_LABELS[pe.estado]}
+                          size="small"
+                          sx={{ bgcolor: ESTADO_PRODUCTO_COLORS[pe.estado] + '30', color: ESTADO_PRODUCTO_COLORS[pe.estado], fontWeight: 'bold' }}
+                        />
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              ) : tarea.pedido?.detalles && tarea.pedido.detalles.length > 0 ? (
                 <Box>
                   {tarea.pedido.detalles.map((detalle: any, idx: number) => (
                     <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.5 }}>

@@ -7,6 +7,9 @@ import {
   AddComentarioData,
   ComentarioTarea,
   TimelineEvent,
+  TareaProductoEstado,
+  CambiarEstadoProductoData,
+  EstadoProductoEnTarea,
 } from '../types/entities';
 
 export const tareasService = {
@@ -53,6 +56,23 @@ export const tareasService = {
 
   async cancelarTarea(id: string): Promise<Tarea> {
     const response = await apiClient.patch<Tarea>(`/tareas/${id}/cancelar`);
+    return response.data;
+  },
+
+  // ========== Per-product state methods ==========
+
+  async getProductosEstado(tareaId: string): Promise<TareaProductoEstado[]> {
+    const response = await apiClient.get<TareaProductoEstado[]>(`/tareas/${tareaId}/productos-estado`);
+    return response.data;
+  },
+
+  async cambiarEstadoProducto(tareaId: string, data: CambiarEstadoProductoData): Promise<TareaProductoEstado> {
+    const response = await apiClient.patch<TareaProductoEstado>(`/tareas/${tareaId}/productos-estado`, data);
+    return response.data;
+  },
+
+  async cambiarEstadoTodosProductos(tareaId: string, nuevoEstado: EstadoProductoEnTarea): Promise<TareaProductoEstado[]> {
+    const response = await apiClient.patch<TareaProductoEstado[]>(`/tareas/${tareaId}/productos-estado/todos`, { nuevoEstado });
     return response.data;
   },
 };

@@ -53,6 +53,7 @@ const AppBar: React.FC = () => {
   };
 
   const getInitials = (name: string) => {
+    if (!name) return '??';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
@@ -68,6 +69,8 @@ const AppBar: React.FC = () => {
           <Button color="inherit" onClick={() => navigate('/pedidos')} startIcon={<CartIcon />}>Pedidos</Button>
           <Button color="inherit" onClick={() => navigate('/tareas')} startIcon={<KanbanIcon />}>Tareas</Button>
           {canManage && <Button color="inherit" onClick={() => navigate('/reportes')} startIcon={<AssessmentIcon />}>Reportes</Button>}
+          {user.rol === UserRole.ADMIN && <Button color="inherit" onClick={() => navigate('/inventario')}>📦 Inventario</Button>}
+          
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

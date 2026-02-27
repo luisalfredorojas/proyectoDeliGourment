@@ -25,6 +25,16 @@ export interface ConsignmentReportData {
   periodo: { inicio: string; fin: string };
 }
 
+export interface InventarioReportData {
+  totalEntregados: number;
+  totalConsignaciones: number;
+  totalProyectados: number;
+  entregados: Array<{ nombre: string; cantidad: number }>;
+  consignaciones: Array<{ nombre: string; cantidad: number }>;
+  proyectados: Array<{ nombre: string; cantidad: number }>;
+  periodo: { inicio: string; fin: string };
+}
+
 export interface OperationalReportData {
   totalTareas: number;
   tareasCanceladas: number;
@@ -77,6 +87,16 @@ class ReportesService {
     if (filters.fechaFin) params.append('fechaFin', filters.fechaFin);
 
     const response = await api.get(`/reportes/consignaciones?${params.toString()}`);
+    return response.data;
+  }
+
+  // Inventory
+  async getInventarioReport(filters: any): Promise<InventarioReportData> {
+    const params = new URLSearchParams();
+    if (filters.fechaInicio) params.append('fechaInicio', filters.fechaInicio);
+    if (filters.fechaFin) params.append('fechaFin', filters.fechaFin);
+
+    const response = await api.get(`/reportes/inventario?${params.toString()}`);
     return response.data;
   }
 

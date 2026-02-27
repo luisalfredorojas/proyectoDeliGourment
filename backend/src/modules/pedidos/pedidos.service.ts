@@ -13,18 +13,32 @@ export class PedidosService {
   constructor(private prisma: PrismaService) {}
 
   async create(createPedidoDto: CreatePedidoDto, userId: string, userRole: string) {
-    // Validate sucursal exists
-    const sucursal = await this.prisma.sucursal.findUnique({
-      where: { id: createPedidoDto.sucursalId },
-    });
+    const esProyeccion = createPedidoDto.esProyeccion || false;
 
-    if (!sucursal) {
-      throw new NotFoundException('Sucursal no encontrada');
+    // Validate sucursal exists (only required for non-projection orders)
+    if (!esProyeccion) {
+      if (!createPedidoDto.sucursalId) {
+        throw new BadRequestException('Debe seleccionar una sucursal para pedidos normales');
+      }
+      const sucursal = await this.prisma.sucursal.findUnique({
+        where: { id: createPedidoDto.sucursalId },
+      });
+      if (!sucursal) {
+        throw new NotFoundException('Sucursal no encontrada');
+      }
     }
 
     // Validate consignment-only orders
     const soloConsignaciones = createPedidoDto.soloConsignaciones || false;
-    
+
+    // Projection orders cannot have consignaciones
+    if (esProyeccion && createPedidoDto.consignaciones && createPedidoDto.consignaciones.length > 0) {
+      throw new BadRequestException('Un pedido de proyección no puede tener consignaciones.');
+    }
+    if (esProyeccion && soloConsignaciones) {
+      throw new BadRequestException('Un pedido no puede ser proyección y solo consignaciones al mismo tiempo.');
+    }
+
     if (soloConsignaciones) {
       // If it's consignment-only, detalles must be empty and consignaciones must have at least 1 item
       if (createPedidoDto.detalles && createPedidoDto.detalles.length > 0) {
@@ -73,6 +87,7 @@ export class PedidosService {
         observaciones: createPedidoDto.observaciones,
         fueraDeHorario: fueraDeHorario && !isAdmin, // Only mark as "late" if it affects production date (Assistant)
         soloConsignaciones,
+        esProyeccion,
         fechaProduccion,
         creadoPorId: userId,
       },
@@ -94,12 +109,34 @@ export class PedidosService {
     });
 
     // Auto-create tarea
-    await this.prisma.tarea.create({
+    const tarea = await this.prisma.tarea.create({
       data: {
         pedidoId: pedido.id,
         estado: 'ABIERTO',
       },
     });
+
+    // Auto-create per-product state tracking entries
+    const detalles = (createPedidoDto.detalles || []) as any[];
+    if (detalles.length > 0) {
+      const productNames = detalles.map((d: any) => d.producto).filter(Boolean);
+      const productos = await this.prisma.producto.findMany({
+        where: { nombre: { in: productNames } },
+        select: { id: true, nombre: true },
+      });
+      const productoMap = new Map(productos.map((p) => [p.nombre, p.id]));
+
+      await this.prisma.tareaProductoEstado.createMany({
+        data: detalles.map((detalle: any) => ({
+          tareaId: tarea.id,
+          productoNombre: detalle.producto || 'Sin nombre',
+          productoId: productoMap.get(detalle.producto) || null,
+          cantidad: detalle.cantidad || 0,
+          estado: 'PENDIENTE',
+        })),
+        skipDuplicates: true,
+      });
+    }
 
     return pedido;
   }

@@ -28,10 +28,14 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear token and redirect to login
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Skip forced redirect for the initial auth check (getCurrentUser)
+      // Let the AuthContext handle it gracefully instead
+      const requestUrl = error.config?.url || '';
+      if (!requestUrl.includes('auth/me') && !requestUrl.includes('auth/profile')) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

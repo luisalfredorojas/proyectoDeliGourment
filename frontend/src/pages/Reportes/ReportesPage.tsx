@@ -7,6 +7,7 @@ import {
   LocalShipping as LocalShippingIcon,
   Inventory as InventoryIcon,
   BarChart as BarChartIcon,
+  Warehouse as WarehouseIcon,
 } from '@mui/icons-material';
 
 const ReportesPage: React.FC = () => {
@@ -47,6 +48,13 @@ const ReportesPage: React.FC = () => {
       icon: <BarChartIcon sx={{ fontSize: 60 }} />,
       color: '#9c27b0',
       path: '/reportes/operativos',
+    },
+    {
+      title: 'Reporte de Inventario',
+      description: 'Entregados, consignaciones y proyectados',
+      icon: <WarehouseIcon sx={{ fontSize: 60 }} />,
+      color: '#424242',
+      path: '/reportes/inventario',
     },
   ];
 

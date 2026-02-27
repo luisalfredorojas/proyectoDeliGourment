@@ -1,6 +1,6 @@
 import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TareaEstado } from '@prisma/client';
+import { TareaEstado, EstadoProductoEnTarea } from '@prisma/client';
 
 export enum TipoComentario {
   GENERAL = 'GENERAL',
@@ -51,4 +51,21 @@ export class AddComentarioDto {
   @IsEnum(TipoComentario)
   @IsOptional()
   tipo?: TipoComentario;
+}
+
+export class CambiarEstadoProductoDto {
+  @ApiProperty({
+    description: 'Nombre del producto dentro de la tarea',
+    example: 'Pan francés',
+  })
+  @IsString()
+  productoNombre: string;
+
+  @ApiProperty({
+    description: 'Nuevo estado del producto',
+    enum: EstadoProductoEnTarea,
+    example: 'EN_PROCESO',
+  })
+  @IsEnum(EstadoProductoEnTarea)
+  nuevoEstado: EstadoProductoEnTarea;
 }

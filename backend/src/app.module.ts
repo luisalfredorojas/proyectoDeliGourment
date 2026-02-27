@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RutasModule } from './modules/rutas/rutas.module';
@@ -13,6 +14,8 @@ import { ProductosModule } from './modules/productos/productos.module';
 import { UsersModule } from './modules/users/users.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ReportesModule } from './modules/reportes/reportes.module';
+import { InventarioModule } from './modules/inventario/inventario.module';
+import { ProyeccionesModule } from './modules/proyecciones/proyecciones.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -20,6 +23,7 @@ import { AppController } from './app.controller';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     RutasModule,
@@ -32,6 +36,8 @@ import { AppController } from './app.controller';
     UsersModule,
     DashboardModule,
     ReportesModule,
+    InventarioModule,
+    ProyeccionesModule,
   ],
   controllers: [AppController],
   providers: [],
