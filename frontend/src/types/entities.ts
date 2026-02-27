@@ -149,7 +149,7 @@ export interface Pedido {
 }
 
 export interface CreatePedidoData {
-  sucursalId: string;
+  sucursalId?: string;
   detalles: DetalleProducto[];
   consignaciones?: { producto: string; cantidad: number; precioUnitario: number }[];
   soloConsignaciones?: boolean;

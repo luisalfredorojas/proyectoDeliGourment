@@ -6,9 +6,8 @@ import {
   IconButton, Alert, LinearProgress, Tabs, Tab,
 } from '@mui/material';
 import {
-  Add as AddIcon, Warning as WarningIcon, TrendingUp as TrendingUpIcon,
+  Add as AddIcon, TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon, SwapHoriz as SwapIcon,
-  Inventory as InventoryIcon, History as HistoryIcon,
   ArrowBack as BackIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
@@ -18,7 +17,6 @@ import {
   MateriaPrimaInventario,
   MovimientoInventario,
   AlertaStockBajo,
-  ResumenInventario,
   RegistrarMovimientoData,
   StockProducto,
 } from '../../services/inventarioService';
@@ -44,7 +42,6 @@ const InventarioPage: React.FC = () => {
   const [materiasPrimas, setMateriasPrimas] = useState<MateriaPrimaInventario[]>([]);
   const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([]);
   const [alertas, setAlertas] = useState<AlertaStockBajo[]>([]);
-  const [resumen, setResumen] = useState<ResumenInventario | null>(null);
   const [loading, setLoading] = useState(true);
   const [openMovimiento, setOpenMovimiento] = useState(false);
   const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
@@ -66,18 +63,16 @@ const InventarioPage: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [mpData, movData, alertData, resData, prodsData, stockData] = await Promise.all([
+      const [mpData, movData, alertData, prodsData, stockData] = await Promise.all([
         inventarioService.getMateriasPrimas(),
         inventarioService.getAllMovimientos(50),
         inventarioService.getAlertas(),
-        inventarioService.getResumen(),
         productosService.getProductos(),
         inventarioService.getStockProductos(),
       ]);
       setMateriasPrimas(mpData);
       setMovimientos(movData);
       setAlertas(alertData);
-      setResumen(resData);
       setProductosDisponibles(prodsData);
       setStockProductos(stockData);
     } catch (error: any) {
