@@ -99,6 +99,12 @@ export class InventarioController {
     return this.inventarioService.getStockProductos();
   }
 
+  @Get('cuadre-stock')
+  @ApiOperation({ summary: 'Cuadre de stock: stock actual vs calculado por historial ENTREGADO' })
+  getCuadreStock() {
+    return this.inventarioService.getCuadreStock();
+  }
+
   @Get('resumen')
   @ApiOperation({ summary: 'Resumen general del inventario' })
   getResumen() {

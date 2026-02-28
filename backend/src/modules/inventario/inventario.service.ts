@@ -452,6 +452,70 @@ export class InventarioService {
   }
 
   /**
+   * Cuadre de stock: compara stockDisponible actual vs stock calculado
+   * a partir del historial de pedidos ENTREGADOS.
+   */
+  async getCuadreStock() {
+    const rows = await this.prisma.$queryRaw<any[]>`
+      WITH adds AS (
+        SELECT item->>'producto' AS nombre, SUM((item->>'cantidad')::int) AS qty
+        FROM "pedidos" p
+        JOIN "tareas" t ON t."pedidoId" = p.id AND t.estado = 'ENTREGADO'
+        JOIN LATERAL jsonb_array_elements(p.detalles::jsonb) AS item ON TRUE
+        WHERE p."esProyeccion" = TRUE AND p.detalles IS NOT NULL
+        GROUP BY 1
+      ),
+      subs AS (
+        SELECT item->>'producto' AS nombre, SUM((item->>'cantidad')::int) AS qty
+        FROM "pedidos" p
+        JOIN "tareas" t ON t."pedidoId" = p.id AND t.estado = 'ENTREGADO'
+        JOIN LATERAL jsonb_array_elements(p.detalles::jsonb) AS item ON TRUE
+        WHERE p."esProyeccion" = FALSE AND p."soloConsignaciones" = FALSE AND p.detalles IS NOT NULL
+        GROUP BY 1
+      ),
+      consig_subs AS (
+        SELECT item->>'producto' AS nombre, SUM((item->>'cantidad')::int) AS qty
+        FROM "pedidos" p
+        JOIN "tareas" t ON t."pedidoId" = p.id AND t.estado = 'ENTREGADO'
+        JOIN LATERAL jsonb_array_elements(p.consignaciones::jsonb) AS item ON TRUE
+        WHERE p."esProyeccion" = FALSE
+          AND p.consignaciones IS NOT NULL
+          AND jsonb_array_length(p.consignaciones::jsonb) > 0
+        GROUP BY 1
+      )
+      SELECT
+        pr.nombre,
+        pr."stockDisponible"                                              AS stock_actual,
+        COALESCE(a.qty, 0)                                                AS total_entradas,
+        COALESCE(s.qty, 0)                                                AS total_salidas,
+        COALESCE(c.qty, 0)                                                AS total_consig,
+        GREATEST(0,
+          COALESCE(a.qty, 0) - COALESCE(s.qty, 0) - COALESCE(c.qty, 0)
+        )                                                                 AS stock_calculado,
+        pr."stockDisponible" - GREATEST(0,
+          COALESCE(a.qty, 0) - COALESCE(s.qty, 0) - COALESCE(c.qty, 0)
+        )                                                                 AS diferencia
+      FROM "productos" pr
+      LEFT JOIN adds         a ON a.nombre = pr.nombre
+      LEFT JOIN subs         s ON s.nombre = pr.nombre
+      LEFT JOIN consig_subs  c ON c.nombre = pr.nombre
+      WHERE (COALESCE(a.qty,0) + COALESCE(s.qty,0) + COALESCE(c.qty,0)) > 0
+      ORDER BY pr.nombre
+    `;
+
+    return rows.map((r) => ({
+      nombre: r.nombre,
+      stock_actual: Number(r.stock_actual),
+      total_entradas: Number(r.total_entradas),
+      total_salidas: Number(r.total_salidas),
+      total_consig: Number(r.total_consig),
+      stock_calculado: Number(r.stock_calculado),
+      diferencia: Number(r.diferencia),
+      cuadrado: Number(r.diferencia) === 0,
+    }));
+  }
+
+  /**
    * Dashboard summary for inventory.
    */
   async getResumenInventario() {
