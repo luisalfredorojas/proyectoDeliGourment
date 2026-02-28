@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, Paper, CircularProgress, Alert, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
+import { Container, Typography, Box, Paper, CircularProgress, Alert, MenuItem, Select, FormControl, InputLabel, IconButton, Button, Tooltip } from '@mui/material';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCorners, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { toast } from 'react-toastify';
@@ -8,7 +8,7 @@ import { rutasService } from '../../services/rutasService';
 import { Tarea, TareaEstado, Ruta } from '../../types/entities';
 import TareaCard from '../../components/Tareas/TareaCard';
 import TareaDetailModal from '../../components/Tareas/TareaDetailModal';
-import { ViewKanban as KanbanIcon } from '@mui/icons-material';
+import { ViewKanban as KanbanIcon, ChevronLeft, ChevronRight } from '@mui/icons-material';
 
 // Droppable column wrapper
 const DroppableColumn: React.FC<{ children: React.ReactNode; id: string }> = ({ children, id }) => {
@@ -51,6 +51,7 @@ const TareasKanban: React.FC = () => {
   const [rutas, setRutas] = useState<Ruta[]>([]);
   const [loading, setLoading] = useState(true);
   const [weekLabel, setWeekLabel] = useState<string>('');
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = semana actual, -1 = anterior, +1 = siguiente
   const [activeTarea, setActiveTarea] = useState<Tarea | null>(null);
   const [selectedTarea, setSelectedTarea] = useState<Tarea | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -60,7 +61,7 @@ const TareasKanban: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [filterRuta]);
+  }, [filterRuta, weekOffset]);
 
   const loadData = async () => {
     try {
@@ -79,14 +80,10 @@ const TareasKanban: React.FC = () => {
         d.setHours(0, 0, 0, 0);
         return d;
       };
-      
-      // Get start of current week (Monday to Sunday)
-      const getWorkWeekStart = (): Date => {
-        return getMonday(new Date());
-      };
-      
-      // Filter tasks: only show tasks from current work week
-      const mondayOfWeek = getWorkWeekStart();
+
+      // Get start of selected week (applying weekOffset in weeks from current)
+      const mondayOfWeek = getMonday(new Date());
+      mondayOfWeek.setDate(mondayOfWeek.getDate() + weekOffset * 7);
       const nextMonday = new Date(mondayOfWeek);
       nextMonday.setDate(nextMonday.getDate() + 7);
       
@@ -252,9 +249,29 @@ const TareasKanban: React.FC = () => {
           <KanbanIcon sx={{ fontSize: 40, color: 'primary.main' }} />
           <div>
             <Typography variant="h4" fontWeight="bold">Tablero de Tareas</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {weekLabel} · Arrastra las tarjetas para cambiar su estado · {tareas.length} tareas
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+              <Tooltip title="Semana anterior">
+                <IconButton size="small" onClick={() => setWeekOffset(w => w - 1)}>
+                  <ChevronLeft fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Typography variant="body2" color="text.secondary" sx={{ minWidth: 200, textAlign: 'center' }}>
+                {weekLabel}
+              </Typography>
+              <Tooltip title="Semana siguiente">
+                <IconButton size="small" onClick={() => setWeekOffset(w => w + 1)}>
+                  <ChevronRight fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              {weekOffset !== 0 && (
+                <Button size="small" variant="outlined" sx={{ ml: 1 }} onClick={() => setWeekOffset(0)}>
+                  Hoy
+                </Button>
+              )}
+              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                · {tareas.length} tareas
+              </Typography>
+            </Box>
           </div>
         </Box>
 
