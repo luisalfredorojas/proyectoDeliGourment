@@ -37,6 +37,7 @@ const TareaDetailModal: React.FC<TareaDetailModalProps> = ({ open, tarea: initia
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [fullHistory, setFullHistory] = useState<any[]>([]);
 
+  const isAdmin = user?.rol === UserRole.ADMIN;
   const canCancel = (user?.rol === UserRole.ADMIN || user?.rol === UserRole.ASISTENTE)
     && tarea.estado !== TareaEstado.CANCELADO
     && tarea.estado !== TareaEstado.ENTREGADO;
@@ -256,10 +257,12 @@ const TareaDetailModal: React.FC<TareaDetailModalProps> = ({ open, tarea: initia
               <Typography variant="caption" display="block">{tarea.pedido?.sucursal?.nombre}</Typography>
               <Typography variant="caption" color="primary.main">Ruta: {tarea.pedido?.sucursal?.ruta?.nombre}</Typography>
               <Divider sx={{ my: 1 }} />
+              {isAdmin && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <MoneyIcon sx={{ fontSize: 16, color: 'success.main' }} />
                 <Typography variant="h6" color="success.main">$ {tarea.pedido?.montoTotal ? Number(tarea.pedido.montoTotal).toFixed(2) : '0.00'}</Typography>
               </Box>
+              )}
             </Paper>
           </Grid>
 

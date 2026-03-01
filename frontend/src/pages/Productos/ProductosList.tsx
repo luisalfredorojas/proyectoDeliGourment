@@ -8,9 +8,13 @@ import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, ArrowBack,
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { productosService, Producto } from '../../services/productosService';
+import { useAuth } from '../../hooks/useAuth';
+import { UserRole } from '../../types/auth';
 
 const ProductosList: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.rol === UserRole.ADMIN;
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,7 +72,7 @@ const ProductosList: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell>Nombre</TableCell>
-              <TableCell>Precio</TableCell>
+              {isAdmin && <TableCell>Precio</TableCell>}
               <TableCell>Descripción</TableCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow>
@@ -77,7 +81,7 @@ const ProductosList: React.FC = () => {
             {productos.map((producto) => (
               <TableRow key={producto.id}>
                 <TableCell>{producto.nombre}</TableCell>
-                <TableCell>$ {Number(producto.precio).toFixed(2)}</TableCell>
+                {isAdmin && <TableCell>$ {Number(producto.precio).toFixed(2)}</TableCell>}
                 <TableCell>{producto.descripcion || '-'}</TableCell>
                 <TableCell align="right">
                   <IconButton color="primary" onClick={() => navigate(`/productos/${producto.id}/edit`)}>
@@ -91,7 +95,7 @@ const ProductosList: React.FC = () => {
             ))}
             {productos.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} align="center">
+                <TableCell colSpan={isAdmin ? 4 : 3} align="center">
                   No hay productos registrados
                 </TableCell>
               </TableRow>

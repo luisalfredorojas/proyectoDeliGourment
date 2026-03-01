@@ -12,11 +12,15 @@ import { sucursalesService } from '../../services/sucursalesService';
 import { productosService, Producto } from '../../services/productosService';
 import { proyeccionesService } from '../../services/proyeccionesService';
 import { Sucursal, DetalleProducto } from '../../types/entities';
+import { useAuth } from '../../hooks/useAuth';
+import { UserRole } from '../../types/auth';
 
 const PedidoForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
+  const { user } = useAuth();
+  const isAdmin = user?.rol === UserRole.ADMIN;
 
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -388,8 +392,8 @@ const PedidoForm: React.FC = () => {
                   <TableRow>
                     <TableCell><strong>Producto</strong></TableCell>
                     <TableCell width="120"><strong>Cantidad</strong></TableCell>
-                    <TableCell width="150"><strong>Precio Unit.</strong></TableCell>
-                    <TableCell width="120"><strong>Subtotal</strong></TableCell>
+                    {isAdmin && <TableCell width="150"><strong>Precio Unit.</strong></TableCell>}
+                    {isAdmin && <TableCell width="120"><strong>Subtotal</strong></TableCell>}
                     <TableCell width="50"></TableCell>
                   </TableRow>
                 </TableHead>
@@ -425,6 +429,7 @@ const PedidoForm: React.FC = () => {
                           required
                         />
                       </TableCell>
+                      {isAdmin && (
                       <TableCell>
                         <TextField
                           type="number"
@@ -433,10 +438,10 @@ const PedidoForm: React.FC = () => {
                           onChange={(e) => handleDetalleChange(index, 'precioUnitario', Number(e.target.value))}
                           inputProps={{ min: 0, step: 0.01 }}
                           onFocus={(e) => e.target.select()}
-                          required
                         />
                       </TableCell>
-                      <TableCell>$ {(detalle.cantidad * detalle.precioUnitario).toFixed(2)}</TableCell>
+                      )}
+                      {isAdmin && <TableCell>$ {(detalle.cantidad * detalle.precioUnitario).toFixed(2)}</TableCell>}
                       <TableCell>
                         <IconButton size="small" color="error" onClick={() => handleRemoveDetalle(index)} disabled={detalles.length === 1}>
                           <DeleteIcon fontSize="small" />
@@ -444,11 +449,13 @@ const PedidoForm: React.FC = () => {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {isAdmin && (
                   <TableRow>
                     <TableCell colSpan={3} align="right"><strong>TOTAL:</strong></TableCell>
                     <TableCell><strong>$ {montoTotal.toFixed(2)}</strong></TableCell>
                     <TableCell></TableCell>
                   </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </Grid>
@@ -478,8 +485,8 @@ const PedidoForm: React.FC = () => {
                       <TableRow>
                         <TableCell>Producto</TableCell>
                         <TableCell width={120}>Cantidad</TableCell>
-                        <TableCell width={150}>Precio Unit.</TableCell>
-                        <TableCell width={150}>Subtotal</TableCell>
+                        {isAdmin && <TableCell width={150}>Precio Unit.</TableCell>}
+                        {isAdmin && <TableCell width={150}>Subtotal</TableCell>}
                         <TableCell width={80}>Acción</TableCell>
                       </TableRow>
                     </TableHead>
@@ -510,6 +517,7 @@ const PedidoForm: React.FC = () => {
                               onFocus={(e) => e.target.select()}
                             />
                           </TableCell>
+                          {isAdmin && (
                           <TableCell>
                             <TextField
                               type="number"
@@ -521,7 +529,8 @@ const PedidoForm: React.FC = () => {
                               onFocus={(e) => e.target.select()}
                             />
                           </TableCell>
-                          <TableCell>$ {(cons.cantidad * cons.precioUnitario).toFixed(2)}</TableCell>
+                          )}
+                          {isAdmin && <TableCell>$ {(cons.cantidad * cons.precioUnitario).toFixed(2)}</TableCell>}
                           <TableCell>
                             <IconButton
                               size="small"
@@ -533,7 +542,7 @@ const PedidoForm: React.FC = () => {
                           </TableCell>
                         </TableRow>
                       ))}
-                      {soloConsignaciones && (
+                      {isAdmin && soloConsignaciones && (
                         <TableRow>
                           <TableCell colSpan={3} align="right"><strong>TOTAL:</strong></TableCell>
                           <TableCell><strong>$ {montoTotal.toFixed(2)}</strong></TableCell>

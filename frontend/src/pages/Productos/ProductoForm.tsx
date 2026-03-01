@@ -8,11 +8,15 @@ import { Save as SaveIcon, ArrowBack, Delete as DeleteIcon, Add as AddIcon } fro
 import { toast } from 'react-toastify';
 import { productosService, MateriaPrimaRequerida } from '../../services/productosService';
 import { materiasPrimasService, MateriaPrima } from '../../services/materiasPrimasService';
+import { useAuth } from '../../hooks/useAuth';
+import { UserRole } from '../../types/auth';
 
 const ProductoForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = !!id;
+  const { user } = useAuth();
+  const isAdmin = user?.rol === UserRole.ADMIN;
 
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -136,18 +140,19 @@ const ProductoForm: React.FC = () => {
                 onChange={(e) => setNombre(e.target.value)}
               />
             </Grid>
+            {isAdmin && (
             <Grid item xs={12} sm={6}>
               <TextField
                 label="Precio ($)"
                 type="number"
                 fullWidth
-                required
                 inputProps={{ min: 0, step: 0.01 }}
                 value={precio}
                 onChange={(e) => setPrecio(Number(e.target.value))}
                 onFocus={(e) => e.target.select()}
               />
             </Grid>
+            )}
             <Grid item xs={12}>
               <TextField
                 label="Descripción"

@@ -5,6 +5,8 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useAuth } from '../../hooks/useAuth';
+import { UserRole } from '../../types/auth';
 
 const ESTADO_PRODUCTO_COLORS: Record<EstadoProductoEnTarea, string> = {
   [EstadoProductoEnTarea.PENDIENTE]: '#9e9e9e',
@@ -20,6 +22,8 @@ interface TareaCardProps {
 }
 
 const TareaCard: React.FC<TareaCardProps> = ({ tarea, onClick }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.rol === UserRole.ADMIN;
   const {
     attributes,
     listeners,
@@ -88,12 +92,14 @@ const TareaCard: React.FC<TareaCardProps> = ({ tarea, onClick }) => {
               />
             </Box>
 
+            {isAdmin && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
               <MoneyIcon sx={{ fontSize: 16, color: 'success.main' }} />
               <Typography variant="body2" fontWeight="bold" color="success.main">
                 $ {tarea.pedido?.montoTotal ? Number(tarea.pedido.montoTotal).toFixed(2) : '0.00'}
               </Typography>
             </Box>
+            )}
 
             {tarea.asignadoA && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>

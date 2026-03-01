@@ -77,7 +77,7 @@ function App() {
         <Route path="/tareas" element={<ProtectedRoute><TareasKanban /></ProtectedRoute>} />
 
         {/* Inventario */}
-        <Route path="/inventario" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN]}><InventarioPage /></ProtectedRoute>} />
+        <Route path="/inventario" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><InventarioPage /></ProtectedRoute>} />
 
 
         {/* Users */}

@@ -9,7 +9,7 @@ import {
   Chip,
   Divider,
 } from '@mui/material';
-import { Store as StoreIcon, Route as RouteIcon, AttachMoney as MoneyIcon, Person as PersonIcon } from '@mui/icons-material';
+import { Store as StoreIcon, Route as RouteIcon, Person as PersonIcon } from '@mui/icons-material';
 import { dashboardService, TareasOperativas } from '../../services/dashboardService';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -87,13 +87,6 @@ const OperativesDashboard: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} sm={6}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <MoneyIcon sx={{ fontSize: 20, color: 'success.main' }} />
-            <Typography variant="h6" color="success.main" fontWeight="bold">
-              ${tarea.pedido?.montoTotal ? Number(tarea.pedido.montoTotal).toFixed(2) : '0.00'}
-            </Typography>
-          </Box>
-
           {tarea.asignadoA && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <PersonIcon sx={{ fontSize: 16, color: 'text.secondary' }} />

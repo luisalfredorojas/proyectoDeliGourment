@@ -38,6 +38,7 @@ const PedidosList: React.FC = () => {
   // Modal state
   const [viewModalOpen, setViewModalOpen] = useState(false);
 
+  const isAdmin = user?.rol === UserRole.ADMIN;
   const canCreate = user?.rol === UserRole.ASISTENTE || user?.rol === UserRole.ADMIN;
   const canManage = user?.rol === UserRole.ASISTENTE || user?.rol === UserRole.ADMIN;
 
@@ -176,7 +177,7 @@ const PedidosList: React.FC = () => {
                   <TableCell><strong>Cliente</strong></TableCell>
                   <TableCell><strong>Sucursal</strong></TableCell>
                   <TableCell><strong>Ruta</strong></TableCell>
-                  <TableCell align="right"><strong>Monto</strong></TableCell>
+                  {isAdmin && <TableCell align="right"><strong>Monto</strong></TableCell>}
                   <TableCell align="center"><strong>Fecha Prod.</strong></TableCell>
                   <TableCell align="center"><strong>Estado Tarea</strong></TableCell>
                   {canManage && <TableCell align="center"><strong>Acciones</strong></TableCell>}
@@ -203,7 +204,7 @@ const PedidosList: React.FC = () => {
                     <TableCell>
                       <Chip label={pedido.sucursal?.ruta?.nombre} size="small" color="primary" variant="outlined" />
                     </TableCell>
-                    <TableCell align="right"><strong>$ {Number(pedido.montoTotal).toFixed(2)}</strong></TableCell>
+                    {isAdmin && <TableCell align="right"><strong>$ {Number(pedido.montoTotal).toFixed(2)}</strong></TableCell>}
                     <TableCell align="center">
                       {format(new Date(pedido.fechaProduccion), 'dd MMM yyyy', { locale: es })}
                     </TableCell>
@@ -295,6 +296,7 @@ const PedidosList: React.FC = () => {
                 </Paper>
               </Grid>
 
+              {isAdmin && (
               <Grid item xs={12} sm={6}>
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -305,6 +307,7 @@ const PedidosList: React.FC = () => {
                   </Typography>
                 </Paper>
               </Grid>
+              )}
 
               {/* Productos */}
               <Grid item xs={12}>
@@ -317,8 +320,8 @@ const PedidosList: React.FC = () => {
                       <TableRow>
                         <TableCell><strong>Producto</strong></TableCell>
                         <TableCell align="center"><strong>Cantidad</strong></TableCell>
-                        <TableCell align="right"><strong>Precio Unit.</strong></TableCell>
-                        <TableCell align="right"><strong>Subtotal</strong></TableCell>
+                        {isAdmin && <TableCell align="right"><strong>Precio Unit.</strong></TableCell>}
+                        {isAdmin && <TableCell align="right"><strong>Subtotal</strong></TableCell>}
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -326,8 +329,8 @@ const PedidosList: React.FC = () => {
                         <TableRow key={idx}>
                           <TableCell>{detalle.producto}</TableCell>
                           <TableCell align="center">{detalle.cantidad}</TableCell>
-                          <TableCell align="right">$ {Number(detalle.precioUnitario).toFixed(2)}</TableCell>
-                          <TableCell align="right">$ {(detalle.cantidad * detalle.precioUnitario).toFixed(2)}</TableCell>
+                          {isAdmin && <TableCell align="right">$ {Number(detalle.precioUnitario).toFixed(2)}</TableCell>}
+                          {isAdmin && <TableCell align="right">$ {(detalle.cantidad * detalle.precioUnitario).toFixed(2)}</TableCell>}
                         </TableRow>
                       ))}
                     </TableBody>
