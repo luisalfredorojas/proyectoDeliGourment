@@ -242,7 +242,7 @@ const ProyeccionesPage: React.FC = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <CalendarIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                       <Typography variant="body2" fontWeight="bold">
-                        {new Date(proy.fechaProduccion).toLocaleDateString('es-EC', {
+                        {new Date(proy.fechaProduccion.substring(0, 10) + 'T12:00:00').toLocaleDateString('es-EC', {
                           weekday: 'short', day: '2-digit', month: 'short',
                         })}
                       </Typography>
@@ -409,7 +409,7 @@ const ProyeccionesPage: React.FC = () => {
       {/* Cuadre Dialog */}
       <Dialog open={openCuadre} onClose={() => { setOpenCuadre(false); setResumenCuadre(null); setSelectedPedidos([]); }} maxWidth="lg" fullWidth>
         <DialogTitle>
-          Cuadrar Proyección — {cuadreProyeccion && new Date(cuadreProyeccion.fechaProduccion).toLocaleDateString('es-EC')}
+          Cuadrar Proyección — {cuadreProyeccion && new Date(cuadreProyeccion.fechaProduccion.substring(0, 10) + 'T12:00:00').toLocaleDateString('es-EC')}
         </DialogTitle>
         <DialogContent>
           {cuadreLoading ? <LinearProgress /> : resumenCuadre && (

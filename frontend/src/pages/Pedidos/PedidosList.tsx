@@ -206,7 +206,7 @@ const PedidosList: React.FC = () => {
                     </TableCell>
                     {isAdmin && <TableCell align="right"><strong>$ {Number(pedido.montoTotal).toFixed(2)}</strong></TableCell>}
                     <TableCell align="center">
-                      {format(new Date(pedido.fechaProduccion), 'dd MMM yyyy', { locale: es })}
+                      {format(new Date(pedido.fechaProduccion.substring(0, 10) + 'T12:00:00'), 'dd MMM yyyy', { locale: es })}
                     </TableCell>
                     <TableCell align="center">
                       {pedido.tarea ? (
@@ -291,7 +291,7 @@ const PedidosList: React.FC = () => {
                     Fecha de Producción
                   </Typography>
                   <Typography variant="body1">
-                    {format(new Date(selectedPedido.fechaProduccion), 'dd MMMM yyyy', { locale: es })}
+                    {format(new Date(selectedPedido.fechaProduccion.substring(0, 10) + 'T12:00:00'), 'dd MMMM yyyy', { locale: es })}
                   </Typography>
                 </Paper>
               </Grid>

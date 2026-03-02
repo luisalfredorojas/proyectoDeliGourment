@@ -291,6 +291,12 @@ export class PedidosService {
 
     // Recalculate montoTotal if detalles or consignaciones changed
     const updateData: any = { ...updatePedidoDto };
+
+    // Convert manually-provided fechaProduccion string to Ecuador midnight UTC
+    if (updateData.fechaProduccion) {
+      const [year, month, day] = String(updateData.fechaProduccion).substring(0, 10).split('-').map(Number);
+      updateData.fechaProduccion = this.ecuadorMidnightUTC(year, month - 1, day);
+    }
     if (updatePedidoDto.detalles || updatePedidoDto.consignaciones || updatePedidoDto.soloConsignaciones !== undefined) {
       const soloConsignaciones = updatePedidoDto.soloConsignaciones ?? pedido.soloConsignaciones ?? false;
       updateData.montoTotal = this.calculateMontoTotal(
@@ -339,27 +345,51 @@ export class PedidosService {
   }
 
   // Helper methods
+
+  // Ecuador/Guayaquil is UTC-5 (no daylight saving time).
+  // Returns the current moment expressed in Ecuador local time components.
+  private getEcuadorDateParts(date: Date): { year: number; month: number; day: number; hour: number; minute: number } {
+    const ECUADOR_OFFSET_MS = -5 * 60 * 60 * 1000; // UTC-5
+    const local = new Date(date.getTime() + ECUADOR_OFFSET_MS);
+    return {
+      year: local.getUTCFullYear(),
+      month: local.getUTCMonth(),
+      day: local.getUTCDate(),
+      hour: local.getUTCHours(),
+      minute: local.getUTCMinutes(),
+    };
+  }
+
+  // Returns a Date representing midnight Ecuador time for the given calendar date parts,
+  // stored as the equivalent UTC timestamp (Ecuador midnight = UTC 05:00).
+  private ecuadorMidnightUTC(year: number, month: number, day: number): Date {
+    const ECUADOR_OFFSET_HOURS = 5; // hours to add to UTC to reach Ecuador midnight
+    return new Date(Date.UTC(year, month, day, ECUADOR_OFFSET_HOURS, 0, 0, 0));
+  }
+
   private isFueraDeHorario(fecha: Date): boolean {
-    const hour = fecha.getHours();
-    const minutes = fecha.getMinutes();
-    return hour > 11 || (hour === 11 && minutes > 30);
+    const { hour, minute } = this.getEcuadorDateParts(fecha);
+    return hour > 11 || (hour === 11 && minute > 30);
   }
 
   private calculateFechaProduccion(now: Date, fueraDeHorario: boolean, isAdmin: boolean): Date {
-    const fecha = new Date(now);
-    fecha.setHours(0, 0, 0, 0); // Set to start of day
+    let { year, month, day } = this.getEcuadorDateParts(now);
 
     // If Admin, they can force same day production even if late (between 11:30 AM and 6:00 AM next day)
     // The requirement says: "Si el administrador agrega un pedido entre las 11:30am y las 6am del dia siguiente ese pedido entra para el mismo dia"
     // This implies Admin orders are always for "Today" unless explicitly future dated (which isn't an option yet).
     // Assistant orders move to next day if late.
-    
+
     if (fueraDeHorario && !isAdmin) {
-      // Next day
-      fecha.setDate(fecha.getDate() + 1);
+      // Advance one calendar day in Ecuador
+      const nextDay = new Date(Date.UTC(year, month, day + 1));
+      year = nextDay.getUTCFullYear();
+      month = nextDay.getUTCMonth();
+      day = nextDay.getUTCDate();
     }
 
-    return fecha;
+    // Store as Ecuador midnight expressed in UTC (UTC-5 → +5h offset)
+    return this.ecuadorMidnightUTC(year, month, day);
   }
 
   private calculateMontoTotal(
@@ -383,8 +413,8 @@ export class PedidosService {
   private canModifyFechaProduccion(now: Date, isAdmin: boolean): boolean {
     if (!isAdmin) return false;
 
-    const hour = now.getHours();
-    // ADMIN can modify between 11:30 AM (11:30) and 6:00 AM (06:00) next day
+    const { hour } = this.getEcuadorDateParts(now);
+    // ADMIN can modify between 11:30 AM (11:30) and 6:00 AM (06:00) next day Ecuador time
     // This means: after 11:30 OR before 6:00
     return hour >= 11 || hour < 6;
   }
