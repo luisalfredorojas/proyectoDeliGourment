@@ -61,6 +61,19 @@ export interface UpdateClienteData {
   activo?: boolean;
 }
 
+// ClienteProducto (precio por cliente)
+export interface ClienteProducto {
+  id: string;
+  clienteId: string;
+  productoId: string;
+  precio: number;
+  producto: {
+    id: string;
+    nombre: string;
+    precio: number;
+  };
+}
+
 // Sucursal
 export interface Sucursal {
   id: string;

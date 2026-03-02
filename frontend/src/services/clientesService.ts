@@ -1,5 +1,5 @@
 import apiClient from './api';
-import { Cliente, CreateClienteData, UpdateClienteData } from '../types/entities';
+import { Cliente, ClienteProducto, CreateClienteData, UpdateClienteData } from '../types/entities';
 
 export const clientesService = {
   // Get all clientes
@@ -30,5 +30,25 @@ export const clientesService = {
   async deleteCliente(id: string): Promise<Cliente> {
     const response = await apiClient.delete<Cliente>(`/clientes/${id}`);
     return response.data;
+  },
+
+  // --- Catálogo de precios por cliente ---
+  async getClienteProductos(clienteId: string): Promise<ClienteProducto[]> {
+    const response = await apiClient.get<ClienteProducto[]>(`/clientes/${clienteId}/productos`);
+    return response.data;
+  },
+
+  async addClienteProducto(clienteId: string, productoId: string, precio: number): Promise<ClienteProducto> {
+    const response = await apiClient.post<ClienteProducto>(`/clientes/${clienteId}/productos`, { productoId, precio });
+    return response.data;
+  },
+
+  async updateClienteProducto(clienteId: string, productoId: string, precio: number): Promise<ClienteProducto> {
+    const response = await apiClient.patch<ClienteProducto>(`/clientes/${clienteId}/productos/${productoId}`, { precio });
+    return response.data;
+  },
+
+  async removeClienteProducto(clienteId: string, productoId: string): Promise<void> {
+    await apiClient.delete(`/clientes/${clienteId}/productos/${productoId}`);
   },
 };

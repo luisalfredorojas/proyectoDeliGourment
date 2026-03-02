@@ -70,7 +70,8 @@ model Cliente {
   updatedAt     DateTime @updatedAt
 
   // Relaciones
-  sucursales Sucursal[]
+  sucursales       Sucursal[]
+  clienteProductos ClienteProducto[]
 
   @@map("clientes")
 }
@@ -279,8 +280,24 @@ model Producto {
   materiasPrimas         ProductoMateriaPrima[]
   tareasEstado           TareaProductoEstado[]
   movimientosInventario  MovimientoInventario[]
+  clienteProductos       ClienteProducto[]
 
   @@map("productos")
+}
+
+// Modelo de Precio por Cliente
+model ClienteProducto {
+  id         String  @id @default(uuid())
+  clienteId  String
+  productoId String
+  precio     Decimal @db.Decimal(10, 2)
+
+  // Relaciones
+  cliente  Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@unique([clienteId, productoId])
+  @@map("clientes_productos")
 }
 
 // Tabla intermedia para Producto <-> MateriaPrima

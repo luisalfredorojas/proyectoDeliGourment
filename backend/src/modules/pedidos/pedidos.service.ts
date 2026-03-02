@@ -16,12 +16,14 @@ export class PedidosService {
     const esProyeccion = createPedidoDto.esProyeccion || false;
 
     // Validate sucursal exists (only required for non-projection orders)
+    let sucursal: { id: string; clienteId: string } | null = null;
     if (!esProyeccion) {
       if (!createPedidoDto.sucursalId) {
         throw new BadRequestException('Debe seleccionar una sucursal para pedidos normales');
       }
-      const sucursal = await this.prisma.sucursal.findUnique({
+      sucursal = await this.prisma.sucursal.findUnique({
         where: { id: createPedidoDto.sucursalId },
+        select: { id: true, clienteId: true },
       });
       if (!sucursal) {
         throw new NotFoundException('Sucursal no encontrada');
@@ -64,15 +66,41 @@ export class PedidosService {
     const now = new Date();
     const fueraDeHorario = this.isFueraDeHorario(now);
     const isAdmin = userRole === 'ADMIN';
-    
+
     // Logic:
     // Admin: Always same day (even if > 11:30 AM).
     // Assistant: If > 11:30 AM, next day.
     const fechaProduccion = this.calculateFechaProduccion(now, fueraDeHorario, isAdmin);
 
+    // Resolve prices from ClienteProducto catalog (ignore frontend prices for regular orders)
+    let resolvedDetalles = createPedidoDto.detalles || [];
+    if (!esProyeccion && sucursal && resolvedDetalles.length > 0) {
+      const productoIds = resolvedDetalles
+        .map((d: any) => d.productoId)
+        .filter(Boolean) as string[];
+
+      const catalogoMap = new Map<string, number>();
+      if (productoIds.length > 0) {
+        const catalogoItems = await this.prisma.clienteProducto.findMany({
+          where: { clienteId: sucursal.clienteId, productoId: { in: productoIds } },
+          select: { productoId: true, precio: true },
+        });
+        catalogoItems.forEach((item) => {
+          catalogoMap.set(item.productoId, Number(item.precio));
+        });
+      }
+
+      resolvedDetalles = resolvedDetalles.map((d: any) => ({
+        ...d,
+        precioUnitario: d.productoId && catalogoMap.has(d.productoId)
+          ? catalogoMap.get(d.productoId)
+          : d.precioUnitario,
+      }));
+    }
+
     // Calculate montoTotal based on order type
     const montoTotal = this.calculateMontoTotal(
-      createPedidoDto.detalles || [],
+      resolvedDetalles,
       createPedidoDto.consignaciones || [],
       soloConsignaciones,
     );
@@ -81,7 +109,7 @@ export class PedidosService {
     const pedido = await this.prisma.pedido.create({
       data: {
         sucursalId: createPedidoDto.sucursalId,
-        detalles: (createPedidoDto.detalles || []) as any,
+        detalles: resolvedDetalles as any,
         consignaciones: (createPedidoDto.consignaciones || []) as any,
         montoTotal,
         observaciones: createPedidoDto.observaciones,

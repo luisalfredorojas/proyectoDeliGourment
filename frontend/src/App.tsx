@@ -10,6 +10,7 @@ import RutasList from './pages/Rutas/RutasList';
 import RutaForm from './pages/Rutas/RutaForm';
 import ClientesList from './pages/Clientes/ClientesList';
 import ClienteForm from './pages/Clientes/ClienteForm';
+import ClienteDetalle from './pages/Clientes/ClienteDetalle';
 import SucursalesList from './pages/Sucursales/SucursalesList';
 import SucursalForm from './pages/Sucursales/SucursalForm';
 import PedidosList from './pages/Pedidos/PedidosList';
@@ -53,6 +54,7 @@ function App() {
         {/* Clientes */}
         <Route path="/clientes" element={<ProtectedRoute><ClientesList /></ProtectedRoute>} />
         <Route path="/clientes/new" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><ClienteForm /></ProtectedRoute>} />
+        <Route path="/clientes/:id" element={<ProtectedRoute><ClienteDetalle /></ProtectedRoute>} />
         <Route path="/clientes/:id/edit" element={<ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.ASISTENTE]}><ClienteForm /></ProtectedRoute>} />
 
         {/* Sucursales */}

@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
+import { CreateClienteProductoDto, UpdateClienteProductoDto } from './dto/create-cliente-producto.dto';
 
 @Injectable()
 export class ClientesService {
@@ -124,5 +125,88 @@ export class ClientesService {
       }
       throw error;
     }
+  }
+
+  // ---- ClienteProducto (catálogo de precios por cliente) ----
+
+  async getClienteProductos(clienteId: string) {
+    await this.ensureClienteExists(clienteId);
+    return this.prisma.clienteProducto.findMany({
+      where: { clienteId },
+      include: {
+        producto: {
+          select: { id: true, nombre: true, precio: true },
+        },
+      },
+      orderBy: { producto: { nombre: 'asc' } },
+    });
+  }
+
+  async addClienteProducto(clienteId: string, dto: CreateClienteProductoDto) {
+    await this.ensureClienteExists(clienteId);
+    try {
+      return await this.prisma.clienteProducto.create({
+        data: {
+          clienteId,
+          productoId: dto.productoId,
+          precio: dto.precio,
+        },
+        include: {
+          producto: {
+            select: { id: true, nombre: true, precio: true },
+          },
+        },
+      });
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new ConflictException('Este producto ya está en el catálogo de este cliente');
+      }
+      if (error.code === 'P2003') {
+        throw new NotFoundException('Producto no encontrado');
+      }
+      throw error;
+    }
+  }
+
+  async updateClienteProducto(clienteId: string, productoId: string, dto: UpdateClienteProductoDto) {
+    await this.ensureClienteExists(clienteId);
+    try {
+      return await this.prisma.clienteProducto.update({
+        where: { clienteId_productoId: { clienteId, productoId } },
+        data: { precio: dto.precio },
+        include: {
+          producto: {
+            select: { id: true, nombre: true, precio: true },
+          },
+        },
+      });
+    } catch (error) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException('Producto no encontrado en el catálogo de este cliente');
+      }
+      throw error;
+    }
+  }
+
+  async removeClienteProducto(clienteId: string, productoId: string) {
+    await this.ensureClienteExists(clienteId);
+    try {
+      return await this.prisma.clienteProducto.delete({
+        where: { clienteId_productoId: { clienteId, productoId } },
+      });
+    } catch (error) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException('Producto no encontrado en el catálogo de este cliente');
+      }
+      throw error;
+    }
+  }
+
+  private async ensureClienteExists(id: string) {
+    const cliente = await this.prisma.cliente.findUnique({ where: { id } });
+    if (!cliente) {
+      throw new NotFoundException(`Cliente con ID ${id} no encontrado`);
+    }
+    return cliente;
   }
 }

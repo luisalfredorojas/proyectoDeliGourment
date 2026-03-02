@@ -17,6 +17,7 @@ import {
 import { ClientesService } from './clientes.service';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
+import { CreateClienteProductoDto, UpdateClienteProductoDto } from './dto/create-cliente-producto.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -76,5 +77,46 @@ export class ClientesController {
   @ApiResponse({ status: 403, description: 'Acceso denegado' })
   remove(@Param('id') id: string) {
     return this.clientesService.remove(id);
+  }
+
+  // ---- Catálogo de precios por cliente ----
+
+  @Get(':id/productos')
+  @ApiOperation({ summary: 'Obtener catálogo de productos y precios de un cliente' })
+  @ApiResponse({ status: 200, description: 'Lista de productos con precios por cliente' })
+  getClienteProductos(@Param('id') id: string) {
+    return this.clientesService.getClienteProductos(id);
+  }
+
+  @Post(':id/productos')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Asignar producto con precio a un cliente (ADMIN)' })
+  @ApiResponse({ status: 201, description: 'Producto asignado al catálogo del cliente' })
+  @ApiResponse({ status: 409, description: 'El producto ya está en el catálogo' })
+  addClienteProducto(@Param('id') id: string, @Body() dto: CreateClienteProductoDto) {
+    return this.clientesService.addClienteProducto(id, dto);
+  }
+
+  @Patch(':id/productos/:productoId')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Actualizar precio de un producto para un cliente (ADMIN)' })
+  @ApiResponse({ status: 200, description: 'Precio actualizado' })
+  updateClienteProducto(
+    @Param('id') id: string,
+    @Param('productoId') productoId: string,
+    @Body() dto: UpdateClienteProductoDto,
+  ) {
+    return this.clientesService.updateClienteProducto(id, productoId, dto);
+  }
+
+  @Delete(':id/productos/:productoId')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Eliminar producto del catálogo de un cliente (ADMIN)' })
+  @ApiResponse({ status: 200, description: 'Producto eliminado del catálogo' })
+  removeClienteProducto(@Param('id') id: string, @Param('productoId') productoId: string) {
+    return this.clientesService.removeClienteProducto(id, productoId);
   }
 }

@@ -30,6 +30,7 @@ import {
   Search as SearchIcon,
   Business as BusinessIcon,
   ArrowBack,
+  Visibility as VisibilityIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { clientesService } from '../../services/clientesService';
@@ -190,6 +191,14 @@ const ClientesList: React.FC = () => {
                     </TableCell>
                     {canEdit && (
                       <TableCell align="center">
+                        <IconButton
+                          size="small"
+                          color="info"
+                          onClick={() => navigate(`/clientes/${cliente.id}`)}
+                          title="Ver detalle y catálogo"
+                        >
+                          <VisibilityIcon />
+                        </IconButton>
                         <IconButton
                           size="small"
                           color="primary"

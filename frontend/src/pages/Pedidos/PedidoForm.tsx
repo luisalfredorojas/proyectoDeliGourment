@@ -11,7 +11,8 @@ import { pedidosService } from '../../services/pedidosService';
 import { sucursalesService } from '../../services/sucursalesService';
 import { productosService, Producto } from '../../services/productosService';
 import { proyeccionesService } from '../../services/proyeccionesService';
-import { Sucursal, DetalleProducto } from '../../types/entities';
+import { clientesService } from '../../services/clientesService';
+import { Sucursal, DetalleProducto, ClienteProducto } from '../../types/entities';
 import { useAuth } from '../../hooks/useAuth';
 import { UserRole } from '../../types/auth';
 
@@ -27,6 +28,8 @@ const PedidoForm: React.FC = () => {
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [selectedSucursal, setSelectedSucursal] = useState<Sucursal | null>(null);
+  const [catalogo, setCatalogo] = useState<ClienteProducto[]>([]); // precios por cliente
+  const [loadingCatalogo, setLoadingCatalogo] = useState(false);
   
   // DetalleProducto now includes optional productoId
   const [detalles, setDetalles] = useState<DetalleProducto[]>([{ producto: '', cantidad: 1, precioUnitario: 0 }]);
@@ -116,6 +119,25 @@ const PedidoForm: React.FC = () => {
     const isFueraDeHorario = hour > 11 || (hour === 11 && minutes > 30);
     setShowWarning(isFueraDeHorario);
   };
+
+  const loadCatalogo = async (sucursal: Sucursal | null) => {
+    if (!sucursal?.clienteId) { setCatalogo([]); return; }
+    setLoadingCatalogo(true);
+    try {
+      const data = await clientesService.getClienteProductos(sucursal.clienteId);
+      setCatalogo(data);
+    } catch {
+      setCatalogo([]);
+    } finally {
+      setLoadingCatalogo(false);
+    }
+  };
+
+  // Productos disponibles para el pedido:
+  // si hay catálogo del cliente, sólo esos; de lo contrario todos
+  const productosDisponibles: Producto[] = catalogo.length > 0
+    ? catalogo.map((c) => ({ id: c.productoId, nombre: c.producto.nombre, precio: Number(c.precio) }))
+    : productos;
 
   const handleAddDetalle = () => {
     setDetalles([...detalles, { producto: '', cantidad: 1, precioUnitario: 0 }]);
@@ -273,7 +295,11 @@ const PedidoForm: React.FC = () => {
                 options={sucursales}
                 getOptionLabel={(option) => `${option.cliente?.razonSocial} - ${option.nombre}`}
                 value={selectedSucursal}
-                onChange={(_, newValue) => setSelectedSucursal(newValue)}
+                onChange={(_, newValue) => {
+                  setSelectedSucursal(newValue);
+                  setDetalles([{ producto: '', cantidad: 1, precioUnitario: 0 }]);
+                  loadCatalogo(newValue);
+                }}
                 renderInput={(params) => <TextField {...params} label="Sucursal" required placeholder="Selecciona una sucursal" />}
               />
             </Grid>
@@ -384,8 +410,18 @@ const PedidoForm: React.FC = () => {
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 Productos
-                <Button startIcon={<AddIcon />} onClick={handleAddDetalle} size="small">Agregar Producto</Button>
+                <Button startIcon={<AddIcon />} onClick={handleAddDetalle} size="small" disabled={!esProyeccion && !selectedSucursal}>Agregar Producto</Button>
               </Typography>
+              {!esProyeccion && selectedSucursal && catalogo.length > 0 && (
+                <Alert severity="info" sx={{ mb: 1 }}>
+                  Mostrando {catalogo.length} producto(s) del catálogo de este cliente con sus precios acordados.
+                </Alert>
+              )}
+              {!esProyeccion && selectedSucursal && catalogo.length === 0 && !loadingCatalogo && (
+                <Alert severity="warning" sx={{ mb: 1 }}>
+                  Este cliente no tiene un catálogo de precios configurado. Se muestran todos los productos con precio base.
+                </Alert>
+              )}
 
               <Table size="small">
                 <TableHead>
@@ -402,12 +438,13 @@ const PedidoForm: React.FC = () => {
                     <TableRow key={index}>
                       <TableCell>
                         <Autocomplete<Producto>
-                          options={productos}
+                          options={productosDisponibles}
                           getOptionLabel={(option) => option.nombre}
-                          value={productos.find(p => p.nombre === detalle.producto) || null}
+                          value={productosDisponibles.find(p => p.nombre === detalle.producto) || null}
                           onChange={(_, newValue) => {
                             handleProductSelect(index, newValue);
                           }}
+                          loading={loadingCatalogo}
                           renderInput={(params) => (
                             <TextField
                                 {...params}

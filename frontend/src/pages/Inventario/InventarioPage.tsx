@@ -12,6 +12,8 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { UserRole } from '../../types/auth';
 import {
   inventarioService,
   MateriaPrimaInventario,
@@ -38,6 +40,8 @@ const MOTIVO_LABELS: Record<string, string> = {
 
 const InventarioPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.rol === UserRole.ADMIN;
   const [tab, setTab] = useState(0);
   const [materiasPrimas, setMateriasPrimas] = useState<MateriaPrimaInventario[]>([]);
   const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([]);
@@ -203,7 +207,7 @@ const InventarioPage: React.FC = () => {
                 <TableCell align="center"><strong>Nivel</strong></TableCell>
                 <TableCell align="center"><strong>Unidad</strong></TableCell>
                 <TableCell align="center"><strong>Proveedor</strong></TableCell>
-                <TableCell align="center"><strong>Costo Unit.</strong></TableCell>
+                {isAdmin && <TableCell align="center"><strong>Costo Unit.</strong></TableCell>}
                 <TableCell align="center"><strong>Movimientos</strong></TableCell>
               </TableRow>
             </TableHead>
@@ -240,11 +244,13 @@ const InventarioPage: React.FC = () => {
                   <TableCell align="center">
                     <Typography variant="caption">{mp.proveedor || '—'}</Typography>
                   </TableCell>
-                  <TableCell align="center">
-                    <Typography variant="caption">
-                      {mp.costoUnitario ? `$${Number(mp.costoUnitario).toFixed(2)}` : '—'}
-                    </Typography>
-                  </TableCell>
+                  {isAdmin && (
+                    <TableCell align="center">
+                      <Typography variant="caption">
+                        {mp.costoUnitario ? `$${Number(mp.costoUnitario).toFixed(2)}` : '—'}
+                      </Typography>
+                    </TableCell>
+                  )}
                   <TableCell align="center">
                     <Chip label={mp._count?.movimientos || 0} size="small" color="primary" variant="outlined" />
                   </TableCell>
@@ -252,7 +258,7 @@ const InventarioPage: React.FC = () => {
               ))}
               {materiasPrimas.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
+                  <TableCell colSpan={isAdmin ? 8 : 7} align="center">
                     <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
                       No hay materias primas registradas
                     </Typography>
@@ -359,7 +365,7 @@ const InventarioPage: React.FC = () => {
                 <TableCell><strong>Producto</strong></TableCell>
                 <TableCell align="center"><strong>Stock Disponible</strong></TableCell>
                 <TableCell align="center"><strong>Merma</strong></TableCell>
-                <TableCell align="center"><strong>Precio</strong></TableCell>
+                {isAdmin && <TableCell align="center"><strong>Precio</strong></TableCell>}
                 <TableCell align="center"><strong>Movimientos</strong></TableCell>
               </TableRow>
             </TableHead>
@@ -394,11 +400,13 @@ const InventarioPage: React.FC = () => {
                       <Typography variant="caption" color="text.secondary">—</Typography>
                     )}
                   </TableCell>
-                  <TableCell align="center">
-                    <Typography variant="caption">
-                      ${Number(prod.precio).toFixed(2)}
-                    </Typography>
-                  </TableCell>
+                  {isAdmin && (
+                    <TableCell align="center">
+                      <Typography variant="caption">
+                        ${Number(prod.precio).toFixed(2)}
+                      </Typography>
+                    </TableCell>
+                  )}
                   <TableCell align="center">
                     <Chip label={prod._count?.movimientosInventario || 0} size="small" color="primary" variant="outlined" />
                   </TableCell>
@@ -406,7 +414,7 @@ const InventarioPage: React.FC = () => {
               ))}
               {stockProductos.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={isAdmin ? 5 : 4} align="center">
                     <Typography variant="body2" color="text.secondary" sx={{ py: 3 }}>
                       No hay productos registrados
                     </Typography>
@@ -449,7 +457,7 @@ const InventarioPage: React.FC = () => {
                 <MenuItem value=""><em>— Ninguno —</em></MenuItem>
                 {productosDisponibles.map((p) => (
                   <MenuItem key={p.id} value={p.id}>
-                    {p.nombre} (${Number(p.precio).toFixed(2)})
+                    {p.nombre}{isAdmin ? ` ($${Number(p.precio).toFixed(2)})` : ''}
                   </MenuItem>
                 ))}
               </Select>
