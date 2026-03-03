@@ -119,6 +119,7 @@ export class DashboardService {
   private async getVentasRango(inicio: Date, fin: Date) {
     const pedidos = await this.prisma.pedido.findMany({
       where: {
+        esProyeccion: false,
         fechaProduccion: {
           gte: inicio,
           lte: fin,
@@ -137,6 +138,7 @@ export class DashboardService {
     const tareas = await this.prisma.tarea.findMany({
       where: {
         pedido: {
+          esProyeccion: false,
           fechaProduccion: {
             gte: inicio,
             lte: fin,
@@ -170,6 +172,7 @@ export class DashboardService {
       where: {
         estado: 'EN_PROCESO',
         pedido: {
+          esProyeccion: false,
           fechaProduccion: {
             gte: inicio,
             lte: fin,
@@ -214,6 +217,7 @@ export class DashboardService {
 
       const pedidos = await this.prisma.pedido.findMany({
         where: {
+          esProyeccion: false,
           fechaProduccion: {
             gte: startOfDay(fecha),
             lt: startOfDay(siguienteDia),
@@ -238,6 +242,7 @@ export class DashboardService {
   private async getTopProductos(limit: number, inicio: Date, fin: Date) {
     const pedidos = await this.prisma.pedido.findMany({
       where: {
+        esProyeccion: false,
         fechaProduccion: {
           gte: inicio,
           lte: fin,
@@ -279,6 +284,7 @@ export class DashboardService {
   private async getVentasPorRuta(inicio: Date, fin: Date) {
     const pedidos = await this.prisma.pedido.findMany({
       where: {
+        esProyeccion: false,
         fechaProduccion: {
           gte: inicio,
           lte: fin,
@@ -309,6 +315,7 @@ export class DashboardService {
   private async getPedidosRecientes(limit: number, inicio: Date, fin: Date) {
     return await this.prisma.pedido.findMany({
       where: {
+        esProyeccion: false,
         fechaProduccion: {
           gte: inicio,
           lte: fin,
