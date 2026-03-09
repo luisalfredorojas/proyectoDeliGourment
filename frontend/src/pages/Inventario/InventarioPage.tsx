@@ -45,6 +45,8 @@ const InventarioPage: React.FC = () => {
   const [tab, setTab] = useState(0);
   const [materiasPrimas, setMateriasPrimas] = useState<MateriaPrimaInventario[]>([]);
   const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([]);
+  const [movPage, setMovPage] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
   const [alertas, setAlertas] = useState<AlertaStockBajo[]>([]);
   const [loading, setLoading] = useState(true);
   const [openMovimiento, setOpenMovimiento] = useState(false);
@@ -64,18 +66,30 @@ const InventarioPage: React.FC = () => {
     loadData();
   }, []);
 
+  const loadMovimientos = async (page: number) => {
+    try {
+      const data = await inventarioService.getAllMovimientos(51, page * 50);
+      setHasNextPage(data.length > 50);
+      setMovimientos(data.slice(0, 50));
+    } catch {
+      toast.error('Error al cargar movimientos');
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
       const [mpData, movData, alertData, prodsData, stockData] = await Promise.all([
         inventarioService.getMateriasPrimas(),
-        inventarioService.getAllMovimientos(50),
+        inventarioService.getAllMovimientos(51, 0),
         inventarioService.getAlertas(),
         productosService.getProductos(),
         inventarioService.getStockProductos(),
       ]);
       setMateriasPrimas(mpData);
-      setMovimientos(movData);
+      setHasNextPage(movData.length > 50);
+      setMovimientos(movData.slice(0, 50));
+      setMovPage(0);
       setAlertas(alertData);
       setProductosDisponibles(prodsData);
       setStockProductos(stockData);
@@ -192,7 +206,7 @@ const InventarioPage: React.FC = () => {
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
         <Tab label={`Productos (${stockProductos.length})`} />
         <Tab label={`Materias Primas (${materiasPrimas.length})`} />
-        <Tab label={`Movimientos (${movimientos.length})`} />
+        <Tab label={`Movimientos (${movimientos.length}${hasNextPage ? '+' : ''})`} />
       </Tabs>
 
       {/* Tab 1: Materias Primas */}
@@ -354,6 +368,35 @@ const InventarioPage: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mt: 2 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={movPage === 0}
+            onClick={async () => {
+              const newPage = movPage - 1;
+              setMovPage(newPage);
+              await loadMovimientos(newPage);
+            }}
+          >
+            ← Anterior
+          </Button>
+          <Typography variant="body2" color="text.secondary">
+            Página {movPage + 1}
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={!hasNextPage}
+            onClick={async () => {
+              const newPage = movPage + 1;
+              setMovPage(newPage);
+              await loadMovimientos(newPage);
+            }}
+          >
+            Siguiente →
+          </Button>
+        </Box>
       )}
 
       {/* Tab 0: Stock de Productos */}

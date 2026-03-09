@@ -174,10 +174,11 @@ export class InventarioService {
   /**
    * Get all movements across all materias primas and productos.
    */
-  async getAllMovimientos(limit = 100) {
+  async getAllMovimientos(limit = 100, skip = 0) {
     return this.prisma.movimientoInventario.findMany({
       orderBy: { fecha: 'desc' },
       take: limit,
+      skip,
       include: {
         materiaPrima: { select: { id: true, nombre: true, unidadMedida: true } },
         producto: { select: { id: true, nombre: true } },

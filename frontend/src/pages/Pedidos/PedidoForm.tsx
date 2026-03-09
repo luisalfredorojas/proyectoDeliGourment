@@ -10,7 +10,6 @@ import { toast } from 'react-toastify';
 import { pedidosService } from '../../services/pedidosService';
 import { sucursalesService } from '../../services/sucursalesService';
 import { productosService, Producto } from '../../services/productosService';
-import { proyeccionesService } from '../../services/proyeccionesService';
 import { clientesService } from '../../services/clientesService';
 import { Sucursal, DetalleProducto, ClienteProducto } from '../../types/entities';
 import { useAuth } from '../../hooks/useAuth';
@@ -35,8 +34,6 @@ const PedidoForm: React.FC = () => {
   const [detalles, setDetalles] = useState<DetalleProducto[]>([{ producto: '', cantidad: 1, precioUnitario: 0 }]);
   const [consignaciones, setConsignaciones] = useState<{ producto: string; cantidad: number; precioUnitario: number }[]>([]);
   const [soloConsignaciones, setSoloConsignaciones] = useState(false);
-  const [esProyeccion, setEsProyeccion] = useState(false);
-  const [sugerenciaLoading, setSugerenciaLoading] = useState(false);
   const [observaciones, setObservaciones] = useState('');
   const [showWarning, setShowWarning] = useState(false);
 
@@ -88,11 +85,6 @@ const PedidoForm: React.FC = () => {
       // Setear soloConsignaciones
       if (pedido.soloConsignaciones) {
         setSoloConsignaciones(true);
-      }
-
-      // Setear esProyeccion
-      if (pedido.esProyeccion) {
-        setEsProyeccion(true);
       }
 
       // Setear observaciones
@@ -217,7 +209,7 @@ const PedidoForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!esProyeccion && !selectedSucursal) {
+    if (!selectedSucursal) {
       toast.error('Debe seleccionar una sucursal');
       return;
     }
@@ -233,9 +225,8 @@ const PedidoForm: React.FC = () => {
       const pedidoData = {
         sucursalId: selectedSucursal?.id || undefined,
         detalles: soloConsignaciones ? [] : detalles,
-        consignaciones: esProyeccion ? undefined : (consignaciones.length > 0 ? consignaciones : undefined),
+        consignaciones: consignaciones.length > 0 ? consignaciones : undefined,
         soloConsignaciones,
-        esProyeccion,
         observaciones: observaciones.trim() || undefined,
       };
 
@@ -289,7 +280,6 @@ const PedidoForm: React.FC = () => {
 
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
-            {!esProyeccion && (
             <Grid item xs={12}>
               <Autocomplete
                 options={sucursales}
@@ -303,7 +293,6 @@ const PedidoForm: React.FC = () => {
                 renderInput={(params) => <TextField {...params} label="Sucursal" required placeholder="Selecciona una sucursal" />}
               />
             </Grid>
-            )}
 
             <Grid item xs={12}>
               <FormControlLabel
@@ -336,88 +325,19 @@ const PedidoForm: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={esProyeccion}
-                    onChange={(e) => {
-                      setEsProyeccion(e.target.checked);
-                      if (e.target.checked) {
-                        setSoloConsignaciones(false);
-                        setConsignaciones([]);
-                        if (detalles.length === 0) {
-                          setDetalles([{ producto: '', cantidad: 1, precioUnitario: 0 }]);
-                        }
-                      }
-                    }}
-                    color="info"
-                    disabled={soloConsignaciones}
-                  />
-                }
-                label={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography>📊 Proyección</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      (Suma al inventario al entregar)
-                    </Typography>
-                  </Box>
-                }
-              />
-            </Grid>
-
-            {esProyeccion && (
-              <Grid item xs={12}>
-                <Button
-                  variant="outlined"
-                  color="info"
-                  onClick={async () => {
-                    setSugerenciaLoading(true);
-                    try {
-                      const manana = new Date();
-                      manana.setDate(manana.getDate() + 1);
-                      const fecha = manana.toISOString().split('T')[0];
-                      const sug = await proyeccionesService.getSugerencia(fecha);
-                      if (sug && sug.detalles.length > 0) {
-                        const newDetalles = sug.detalles.map(d => {
-                          const prod = productos.find(p => p.nombre === d.producto);
-                          return {
-                            producto: d.producto,
-                            cantidad: d.cantidad,
-                            precioUnitario: prod ? Number(prod.precio) : 0,
-                          };
-                        });
-                        setDetalles(newDetalles);
-                        toast.success(`Sugerencia cargada: ${sug.totalPedidosAnalizados} pedidos analizados`);
-                      } else {
-                        toast.info('No hay datos históricos suficientes');
-                      }
-                    } catch {
-                      toast.error('Error al obtener sugerencia');
-                    } finally {
-                      setSugerenciaLoading(false);
-                    }
-                  }}
-                  disabled={sugerenciaLoading}
-                  sx={{ mb: 1 }}
-                >
-                  {sugerenciaLoading ? '⏳ Analizando...' : '🤖 Cargar Sugerencia IA'}
-                </Button>
-              </Grid>
-            )}
 
             {!soloConsignaciones && (
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 Productos
-                <Button startIcon={<AddIcon />} onClick={handleAddDetalle} size="small" disabled={!esProyeccion && !selectedSucursal}>Agregar Producto</Button>
+                <Button startIcon={<AddIcon />} onClick={handleAddDetalle} size="small" disabled={!selectedSucursal}>Agregar Producto</Button>
               </Typography>
-              {!esProyeccion && selectedSucursal && catalogo.length > 0 && (
+              {selectedSucursal && catalogo.length > 0 && (
                 <Alert severity="info" sx={{ mb: 1 }}>
                   Mostrando {catalogo.length} producto(s) del catálogo de este cliente con sus precios acordados.
                 </Alert>
               )}
-              {!esProyeccion && selectedSucursal && catalogo.length === 0 && !loadingCatalogo && (
+              {selectedSucursal && catalogo.length === 0 && !loadingCatalogo && (
                 <Alert severity="warning" sx={{ mb: 1 }}>
                   Este cliente no tiene un catálogo de precios configurado. Se muestran todos los productos con precio base.
                 </Alert>
@@ -498,7 +418,6 @@ const PedidoForm: React.FC = () => {
             </Grid>
             )}
 
-            {!esProyeccion && (
             <Grid item xs={12}>
               <Paper elevation={2} sx={{ p: 3, bgcolor: '#fffbea', borderLeft: 4, borderColor: '#f59e0b' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -595,7 +514,6 @@ const PedidoForm: React.FC = () => {
                 )}
               </Paper>
             </Grid>
-            )}  {/* end !esProyeccion */}
 
             <Grid item xs={12}>
               <TextField

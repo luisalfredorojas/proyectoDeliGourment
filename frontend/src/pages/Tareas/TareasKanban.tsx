@@ -20,8 +20,6 @@ const ESTADOS: TareaEstado[] = [
   TareaEstado.ABIERTO,
   TareaEstado.EN_ESPERA,
   TareaEstado.EN_PROCESO,
-  TareaEstado.EMBALAJE,
-  TareaEstado.LOGISTICA,
   TareaEstado.ENTREGADO,
   TareaEstado.CANCELADO,
 ];
