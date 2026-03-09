@@ -286,6 +286,7 @@ const InventarioPage: React.FC = () => {
 
       {/* Tab 2: Movimientos */}
       {tab === 2 && (
+        <>
         <TableContainer component={Paper}>
           <Table size="small">
             <TableHead>
@@ -397,6 +398,7 @@ const InventarioPage: React.FC = () => {
             Siguiente →
           </Button>
         </Box>
+        </>
       )}
 
       {/* Tab 0: Stock de Productos */}
