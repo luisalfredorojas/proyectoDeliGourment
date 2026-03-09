@@ -71,8 +71,9 @@ export class InventarioController {
   @Get('movimientos')
   @ApiOperation({ summary: 'Listar todos los movimientos de inventario' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  getAllMovimientos(@Query('limit') limit?: number) {
-    return this.inventarioService.getAllMovimientos(limit ? Number(limit) : 100);
+  @ApiQuery({ name: 'skip', required: false, type: Number })
+  getAllMovimientos(@Query('limit') limit?: number, @Query('skip') skip?: number) {
+    return this.inventarioService.getAllMovimientos(limit ? Number(limit) : 100, skip ? Number(skip) : 0);
   }
 
   @Get('movimientos/:materiaPrimaId')

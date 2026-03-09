@@ -87,9 +87,12 @@ export const inventarioService = {
     return response.data;
   },
 
-  async getAllMovimientos(limit?: number): Promise<MovimientoInventario[]> {
-    const params = limit ? `?limit=${limit}` : '';
-    const response = await apiClient.get<MovimientoInventario[]>(`/inventario/movimientos${params}`);
+  async getAllMovimientos(limit?: number, skip?: number): Promise<MovimientoInventario[]> {
+    const params = new URLSearchParams();
+    if (limit) params.set('limit', String(limit));
+    if (skip) params.set('skip', String(skip));
+    const qs = params.toString();
+    const response = await apiClient.get<MovimientoInventario[]>(`/inventario/movimientos${qs ? '?' + qs : ''}`);
     return response.data;
   },
 
