@@ -14,6 +14,8 @@ const UsersList: React.FC = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savingUser, setSavingUser] = useState(false);
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState<UpdateUserDto>({});
@@ -56,6 +58,7 @@ const UsersList: React.FC = () => {
   const handleEditSave = async () => {
     if (!selectedUser) return;
 
+    setSavingUser(true);
     try {
       await usersService.updateUser(selectedUser.id, editForm);
       toast.success('Usuario actualizado correctamente');
@@ -63,16 +66,21 @@ const UsersList: React.FC = () => {
       await loadUsers();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Error al actualizar usuario');
+    } finally {
+      setSavingUser(false);
     }
   };
 
   const handleToggleActive = async (user: User) => {
+    setTogglingUserId(user.id);
     try {
       await usersService.toggleActive(user.id);
       toast.success(`Usuario ${user.activo ? 'desactivado' : 'activado'} correctamente`);
       await loadUsers();
     } catch (error: any) {
       toast.error('Error al cambiar estado del usuario');
+    } finally {
+      setTogglingUserId(null);
     }
   };
 
@@ -157,10 +165,11 @@ const UsersList: React.FC = () => {
                         checked={user.activo}
                         onChange={() => handleToggleActive(user)}
                         color="success"
+                        disabled={togglingUserId === user.id}
                       />
                     </TableCell>
                     <TableCell align="center">
-                      <IconButton size="small" color="primary" onClick={() => handleEditClick(user)}>
+                      <IconButton size="small" color="primary" onClick={() => handleEditClick(user)} disabled={togglingUserId === user.id}>
                         <EditIcon />
                       </IconButton>
                     </TableCell>
@@ -198,9 +207,9 @@ const UsersList: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleEditClose}>Cancelar</Button>
-          <Button onClick={handleEditSave} variant="contained" color="primary">
-            Guardar
+          <Button onClick={handleEditClose} disabled={savingUser}>Cancelar</Button>
+          <Button onClick={handleEditSave} variant="contained" color="primary" disabled={savingUser}>
+            {savingUser ? 'Guardando...' : 'Guardar'}
           </Button>
         </DialogActions>
       </Dialog>

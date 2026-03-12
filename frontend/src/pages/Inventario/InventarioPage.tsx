@@ -3,7 +3,7 @@ import {
   Box, Typography, Paper, Grid, Button, Chip, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Select, MenuItem, FormControl, InputLabel,
-  IconButton, Alert, LinearProgress, Tabs, Tab,
+  IconButton, Alert, LinearProgress, Tabs, Tab, CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon, TrendingUp as TrendingUpIcon,
@@ -49,6 +49,7 @@ const InventarioPage: React.FC = () => {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [alertas, setAlertas] = useState<AlertaStockBajo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMovimiento, setLoadingMovimiento] = useState(false);
   const [openMovimiento, setOpenMovimiento] = useState(false);
   const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
   const [stockProductos, setStockProductos] = useState<StockProducto[]>([]);
@@ -105,6 +106,7 @@ const InventarioPage: React.FC = () => {
       toast.warning('Seleccione un producto o materia prima y cantidad');
       return;
     }
+    setLoadingMovimiento(true);
     try {
       const dataToSend: any = { ...movForm };
       if (!dataToSend.materiaPrimaId) delete dataToSend.materiaPrimaId;
@@ -119,6 +121,8 @@ const InventarioPage: React.FC = () => {
       await loadData();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Error al registrar movimiento');
+    } finally {
+      setLoadingMovimiento(false);
     }
   };
 
@@ -568,13 +572,14 @@ const InventarioPage: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenMovimiento(false)}>Cancelar</Button>
+          <Button onClick={() => setOpenMovimiento(false)} disabled={loadingMovimiento}>Cancelar</Button>
           <Button
             variant="contained"
             onClick={handleRegistrarMovimiento}
-            disabled={(!movForm.materiaPrimaId && !movForm.productoId) || movForm.cantidad <= 0}
+            disabled={loadingMovimiento || (!movForm.materiaPrimaId && !movForm.productoId) || movForm.cantidad <= 0}
+            startIcon={loadingMovimiento ? <CircularProgress size={16} color="inherit" /> : undefined}
           >
-            Registrar
+            {loadingMovimiento ? 'Registrando...' : 'Registrar'}
           </Button>
         </DialogActions>
       </Dialog>
