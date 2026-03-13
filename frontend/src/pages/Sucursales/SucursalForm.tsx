@@ -87,18 +87,26 @@ const SucursalForm: React.FC = () => {
   const onSubmit = async (data: SucursalFormValues) => {
     setLoading(true);
     try {
+      // Clean up empty optional fields
+      const cleanData = {
+        ...data,
+        direccion: data.direccion || undefined,
+        ubicacion: data.ubicacion || undefined,
+        telefono: data.telefono || undefined,
+      };
+
       if (isEditMode && id) {
-        const updateData: UpdateSucursalData = data;
+        const updateData: UpdateSucursalData = cleanData;
         await sucursalesService.updateSucursal(id, updateData);
         toast.success('Sucursal actualizada exitosamente');
       } else {
         const createData: CreateSucursalData = {
-          clienteId: data.clienteId,
-          rutaId: data.rutaId,
-          nombre: data.nombre,
-          direccion: data.direccion,
-          ubicacion: data.ubicacion,
-          telefono: data.telefono,
+          clienteId: cleanData.clienteId,
+          rutaId: cleanData.rutaId,
+          nombre: cleanData.nombre,
+          direccion: cleanData.direccion,
+          ubicacion: cleanData.ubicacion,
+          telefono: cleanData.telefono,
         };
         await sucursalesService.createSucursal(createData);
         toast.success('Sucursal creada exitosamente');

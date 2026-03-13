@@ -92,7 +92,7 @@ const ProductoForm: React.FC = () => {
       const payload = {
         nombre,
         precio,
-        descripcion,
+        descripcion: descripcion || undefined,
         materiasPrimas: materiasRequeridas.map(m => ({
           materiaPrimaId: m.materiaPrimaId,
           cantidadRequerida: m.cantidadRequerida

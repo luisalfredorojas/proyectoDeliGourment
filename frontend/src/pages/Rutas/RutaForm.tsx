@@ -79,14 +79,20 @@ const RutaForm: React.FC = () => {
   const onSubmit = async (data: RutaFormValues) => {
     setLoading(true);
     try {
+      // Clean up empty optional fields
+      const cleanData = {
+        ...data,
+        descripcion: data.descripcion || undefined,
+      };
+
       if (isEditMode && id) {
-        const updateData: UpdateRutaData = data;
+        const updateData: UpdateRutaData = cleanData;
         await rutasService.updateRuta(id, updateData);
         toast.success('Ruta actualizada exitosamente');
       } else {
         const createData: CreateRutaData = {
-          nombre: data.nombre,
-          descripcion: data.descripcion,
+          nombre: cleanData.nombre,
+          descripcion: cleanData.descripcion,
         };
         await rutasService.createRuta(createData);
         toast.success('Ruta creada exitosamente');

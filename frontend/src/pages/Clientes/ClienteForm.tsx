@@ -96,19 +96,28 @@ const ClienteForm: React.FC = () => {
   const onSubmit = async (data: ClienteFormValues) => {
     setLoading(true);
     try {
+      // Clean up empty optional fields so backend doesn't validate "" as invalid email, etc.
+      const cleanData = {
+        ...data,
+        ciudad: data.ciudad || undefined,
+        telefono: data.telefono || undefined,
+        email: data.email || undefined,
+        ubicacion: data.ubicacion || undefined,
+      };
+
       if (isEditMode && id) {
-        const updateData: UpdateClienteData = data;
+        const updateData: UpdateClienteData = cleanData;
         await clientesService.updateCliente(id, updateData);
         toast.success('Cliente actualizado exitosamente');
       } else {
         const createData: CreateClienteData = {
-          razonSocial: data.razonSocial,
-          ruc: data.ruc,
-          direccion: data.direccion,
-          ciudad: data.ciudad,
-          telefono: data.telefono,
-          email: data.email,
-          ubicacion: data.ubicacion,
+          razonSocial: cleanData.razonSocial,
+          ruc: cleanData.ruc,
+          direccion: cleanData.direccion,
+          ciudad: cleanData.ciudad,
+          telefono: cleanData.telefono,
+          email: cleanData.email,
+          ubicacion: cleanData.ubicacion,
         };
         await clientesService.createCliente(createData);
         toast.success('Cliente creado exitosamente');
