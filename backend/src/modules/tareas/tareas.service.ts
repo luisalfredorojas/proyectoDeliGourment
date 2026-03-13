@@ -187,24 +187,27 @@ export class TareasService {
     }
 
     // Check time-based permissions
+    // Use Ecuador timezone since the server may run in UTC (Railway)
     const now = new Date();
+    const ecuadorTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Guayaquil' }));
     
-    // DEBUG: Log the role to see what we're getting
+    // DEBUG: Log the role and times to help troubleshoot
     console.log('🔍 DEBUG - cambiarEstado:', {
       userRole,
       normalizedRole: userRole?.toUpperCase(),
-      currentTime: now.toLocaleTimeString(),
+      serverUTC: now.toISOString(),
+      ecuadorTime: ecuadorTime.toLocaleTimeString(),
     });
     
-    const canEdit = this.canEditTarea(now, userRole);
+    const canEdit = this.canEditTarea(ecuadorTime, userRole);
     
     if (!canEdit) {
-      const hour = now.getHours();
-      const minutes = now.getMinutes();
+      const hour = ecuadorTime.getHours();
+      const minutes = ecuadorTime.getMinutes();
       const currentTime = `${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
       
       throw new BadRequestException(
-        `No tiene permisos para editar tareas en este horario (${currentTime}). ASISTENTE y PRODUCCION solo pueden editar entre 6:00 AM y 11:30 AM. Rol actual: ${userRole}`,
+        `No tiene permisos para editar tareas en este horario (${currentTime} hora Ecuador). PRODUCCION solo puede editar entre 6:00 AM y 11:30 AM. Rol actual: ${userRole}`,
       );
     }
 
@@ -330,18 +333,18 @@ export class TareasService {
     // Normalize role to uppercase for comparison
     const normalizedRole = userRole?.toUpperCase();
     
-    // ADMIN can edit anytime
-    if (normalizedRole === 'ADMIN') {
+    // ADMIN and ASISTENTE can edit anytime
+    if (normalizedRole === 'ADMIN' || normalizedRole === 'ASISTENTE') {
       return true;
     }
 
-    // ASISTENTE and PRODUCCION can only edit between 6:00 AM and 11:30 AM
-    if (normalizedRole === 'ASISTENTE' || normalizedRole === 'PRODUCCION') {
+    // PRODUCCION can only edit between 6:00 AM and 11:30 AM (Ecuador time)
+    if (normalizedRole === 'PRODUCCION') {
       const hour = now.getHours();
       const minutes = now.getMinutes();
       
       // Between 6:00 AM and 11:30 AM
-      return (hour > 6 || (hour === 6 && minutes >= 0)) && 
+      return (hour >= 6) && 
              (hour < 11 || (hour === 11 && minutes <= 30));
     }
 
