@@ -8,7 +8,7 @@ import { rutasService } from '../../services/rutasService';
 import { Tarea, TareaEstado, Ruta } from '../../types/entities';
 import TareaCard from '../../components/Tareas/TareaCard';
 import TareaDetailModal from '../../components/Tareas/TareaDetailModal';
-import { ViewKanban as KanbanIcon, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { ViewKanban as KanbanIcon, ChevronLeft, ChevronRight, CalendarViewWeek, CalendarViewDay } from '@mui/icons-material';
 
 // Droppable column wrapper
 const DroppableColumn: React.FC<{ children: React.ReactNode; id: string }> = ({ children, id }) => {
@@ -18,7 +18,6 @@ const DroppableColumn: React.FC<{ children: React.ReactNode; id: string }> = ({ 
 
 const ESTADOS: TareaEstado[] = [
   TareaEstado.ABIERTO,
-  TareaEstado.EN_ESPERA,
   TareaEstado.EN_PROCESO,
   TareaEstado.ENTREGADO,
   TareaEstado.CANCELADO,
@@ -48,8 +47,10 @@ const TareasKanban: React.FC = () => {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [rutas, setRutas] = useState<Ruta[]>([]);
   const [loading, setLoading] = useState(true);
-  const [weekLabel, setWeekLabel] = useState<string>('');
-  const [weekOffset, setWeekOffset] = useState(0); // 0 = semana actual, -1 = anterior, +1 = siguiente
+  const [viewMode, setViewMode] = useState<'semana' | 'dia'>('semana');
+  const [periodLabel, setPeriodLabel] = useState<string>('');
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = semana actual
+  const [dayOffset, setDayOffset] = useState(0);   // 0 = hoy
   const [activeTarea, setActiveTarea] = useState<Tarea | null>(null);
   const [selectedTarea, setSelectedTarea] = useState<Tarea | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -59,7 +60,7 @@ const TareasKanban: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [filterRuta, weekOffset]);
+  }, [filterRuta, weekOffset, dayOffset, viewMode]);
 
   const loadData = async () => {
     try {
@@ -69,39 +70,59 @@ const TareasKanban: React.FC = () => {
         rutasService.getRutas(),
       ]);
       
-      // Helper: Get Monday of a given week
-      const getMonday = (date: Date): Date => {
-        const d = new Date(date);
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
-        d.setDate(diff);
-        d.setHours(0, 0, 0, 0);
-        return d;
-      };
-
-      // Get start of selected week (applying weekOffset in weeks from current)
-      const mondayOfWeek = getMonday(new Date());
-      mondayOfWeek.setDate(mondayOfWeek.getDate() + weekOffset * 7);
-      const nextMonday = new Date(mondayOfWeek);
-      nextMonday.setDate(nextMonday.getDate() + 7);
-      
-      const filteredTareas = tareasData.filter((tarea) => {
-        if (!tarea.pedido) return false;
-        const fechaProduccion = new Date(tarea.pedido.fechaProduccion);
-        // Must be >= Monday of current week and < Monday of next week
-        return fechaProduccion >= mondayOfWeek && fechaProduccion < nextMonday;
-      });
-      
-      // Generate week label (Monday to Sunday)
       const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
                       'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-      const sunday = new Date(nextMonday);
-      sunday.setDate(sunday.getDate() - 1);
-      const startLabel = `${mondayOfWeek.getDate()} ${months[mondayOfWeek.getMonth()]}`;
-      const endLabel = `${sunday.getDate()} ${months[sunday.getMonth()]}`;
-      setWeekLabel(`Semana del ${startLabel} al ${endLabel}`);
+      const days = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+      let filteredTareas: typeof tareasData;
+
+      if (viewMode === 'dia') {
+        // Day mode: filter by a single day using dayOffset
+        const targetDay = new Date();
+        targetDay.setDate(targetDay.getDate() + dayOffset);
+        targetDay.setHours(0, 0, 0, 0);
+        const nextDay = new Date(targetDay);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        filteredTareas = tareasData.filter((tarea) => {
+          if (!tarea.pedido) return false;
+          const fechaProduccion = new Date(tarea.pedido.fechaProduccion);
+          return fechaProduccion >= targetDay && fechaProduccion < nextDay;
+        });
+
+        const dayName = days[targetDay.getDay()];
+        const label = `${dayName} ${targetDay.getDate()} ${months[targetDay.getMonth()]} ${targetDay.getFullYear()}`;
+        setPeriodLabel(dayOffset === 0 ? `Hoy · ${label}` : label.charAt(0).toUpperCase() + label.slice(1));
+      } else {
+        // Week mode (existing logic)
+        const getMonday = (date: Date): Date => {
+          const d = new Date(date);
+          const day = d.getDay();
+          const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+          d.setDate(diff);
+          d.setHours(0, 0, 0, 0);
+          return d;
+        };
+
+        const mondayOfWeek = getMonday(new Date());
+        mondayOfWeek.setDate(mondayOfWeek.getDate() + weekOffset * 7);
+        const nextMonday = new Date(mondayOfWeek);
+        nextMonday.setDate(nextMonday.getDate() + 7);
+
+        filteredTareas = tareasData.filter((tarea) => {
+          if (!tarea.pedido) return false;
+          const fechaProduccion = new Date(tarea.pedido.fechaProduccion);
+          return fechaProduccion >= mondayOfWeek && fechaProduccion < nextMonday;
+        });
+
+        const sunday = new Date(nextMonday);
+        sunday.setDate(sunday.getDate() - 1);
+        const startLabel = `${mondayOfWeek.getDate()} ${months[mondayOfWeek.getMonth()]}`;
+        const endLabel = `${sunday.getDate()} ${months[sunday.getMonth()]}`;
+        setPeriodLabel(`Semana del ${startLabel} al ${endLabel}`);
+      }
       
-      setTareas(filteredTareas);
+      setTareas(filteredTareas as Tarea[]);
       setRutas(rutasData);
     } catch (error: any) {
       toast.error('Error al cargar tareas');
@@ -247,22 +268,36 @@ const TareasKanban: React.FC = () => {
           <KanbanIcon sx={{ fontSize: 40, color: 'primary.main' }} />
           <div>
             <Typography variant="h4" fontWeight="bold">Tablero de Tareas</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-              <Tooltip title="Semana anterior">
-                <IconButton size="small" onClick={() => setWeekOffset(w => w - 1)}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+              {/* Toggle semana/día */}
+              <Tooltip title={viewMode === 'semana' ? 'Cambiar a vista por día' : 'Cambiar a vista por semana'}>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setViewMode(v => v === 'semana' ? 'dia' : 'semana');
+                    setWeekOffset(0);
+                    setDayOffset(0);
+                  }}
+                  sx={{ color: 'primary.main' }}
+                >
+                  {viewMode === 'semana' ? <CalendarViewDay fontSize="small" /> : <CalendarViewWeek fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={viewMode === 'semana' ? 'Semana anterior' : 'Día anterior'}>
+                <IconButton size="small" onClick={() => viewMode === 'semana' ? setWeekOffset(w => w - 1) : setDayOffset(d => d - 1)}>
                   <ChevronLeft fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Typography variant="body2" color="text.secondary" sx={{ minWidth: 200, textAlign: 'center' }}>
-                {weekLabel}
+              <Typography variant="body2" color="text.secondary" sx={{ minWidth: 220, textAlign: 'center' }}>
+                {periodLabel}
               </Typography>
-              <Tooltip title="Semana siguiente">
-                <IconButton size="small" onClick={() => setWeekOffset(w => w + 1)}>
+              <Tooltip title={viewMode === 'semana' ? 'Semana siguiente' : 'Día siguiente'}>
+                <IconButton size="small" onClick={() => viewMode === 'semana' ? setWeekOffset(w => w + 1) : setDayOffset(d => d + 1)}>
                   <ChevronRight fontSize="small" />
                 </IconButton>
               </Tooltip>
-              {weekOffset !== 0 && (
-                <Button size="small" variant="outlined" sx={{ ml: 1 }} onClick={() => setWeekOffset(0)}>
+              {(viewMode === 'semana' ? weekOffset !== 0 : dayOffset !== 0) && (
+                <Button size="small" variant="outlined" sx={{ ml: 1 }} onClick={() => { setWeekOffset(0); setDayOffset(0); }}>
                   Hoy
                 </Button>
               )}
